@@ -58,7 +58,7 @@ int main()
 	phase = 0.0;
 	while ((c = getc(fp)) != EOF)
 	{
-		inf = ((double)(c) - 128.0) / (128.0);
+		inf = (((double)c) - 127.5) / (127.5);
 		ref = inf * sin(phase);
 		imf = inf * cos(phase);
 		rebuf[nre] = ref;
@@ -71,6 +71,10 @@ int main()
 	fclose(fp);
 	
 	printf("Decimating (pass 1)...\n");
+
+	nre -= nre % 7;
+	nim -= nim % 7;
+	
 	memset(delayline, 0, sizeof(delayline));
 	decim(7, pass1_ncoefs, pass1_coefs, delayline, nre, rebuf, rebuf2, &nre);
 
