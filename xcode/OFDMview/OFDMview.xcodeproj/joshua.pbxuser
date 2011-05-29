@@ -3,6 +3,7 @@
 	29B97313FDCFA39411CA2CEA /* Project object */ = {
 		activeBuildConfigurationName = Debug;
 		activeExecutable = 42F20D7F101BA5A400463F8F /* OFDMview */;
+		activeSDKPreference = macosx10.6;
 		activeTarget = 8D1107260486CEB800E47090 /* OFDMview */;
 		addToTargets = (
 			8D1107260486CEB800E47090 /* OFDMview */,
@@ -36,19 +37,16 @@
 					PBXFileDataSource_Target_ColumnID,
 				);
 			};
-			PBXPerProjectTemplateStateSaveDate = 270532035;
-			PBXWorkspaceStateSaveDate = 270532035;
+			PBXPerProjectTemplateStateSaveDate = 328355930;
+			PBXWorkspaceStateSaveDate = 328355930;
 		};
 		perUserProjectItems = {
-			424F872E101D715F00F6FE43 /* PBXTextBookmark */ = 424F872E101D715F00F6FE43 /* PBXTextBookmark */;
-			424F872F101D715F00F6FE43 /* PBXTextBookmark */ = 424F872F101D715F00F6FE43 /* PBXTextBookmark */;
-			424F8730101D715F00F6FE43 /* PBXTextBookmark */ = 424F8730101D715F00F6FE43 /* PBXTextBookmark */;
-			42CC9F5C101C358A00FA0833 /* PBXTextBookmark */ = 42CC9F5C101C358A00FA0833 /* PBXTextBookmark */;
-			42CC9F5D101C358A00FA0833 /* PBXTextBookmark */ = 42CC9F5D101C358A00FA0833 /* PBXTextBookmark */;
-			42CC9F6D101C375600FA0833 /* PBXTextBookmark */ = 42CC9F6D101C375600FA0833 /* PBXTextBookmark */;
-			42CC9F6E101C375600FA0833 /* PBXTextBookmark */ = 42CC9F6E101C375600FA0833 /* PBXTextBookmark */;
-			42CE71B8101F8A2800A23D04 /* PBXTextBookmark */ = 42CE71B8101F8A2800A23D04 /* PBXTextBookmark */;
-			42EA88D31023CD0600F83223 /* PBXTextBookmark */ = 42EA88D31023CD0600F83223 /* PBXTextBookmark */;
+			424F872E101D715F00F6FE43 = 424F872E101D715F00F6FE43 /* PBXTextBookmark */;
+			424F872F101D715F00F6FE43 = 424F872F101D715F00F6FE43 /* PBXTextBookmark */;
+			424F8730101D715F00F6FE43 = 424F8730101D715F00F6FE43 /* PBXTextBookmark */;
+			42BFCF43139250670095B324 /* PBXTextBookmark */ = 42BFCF43139250670095B324 /* PBXTextBookmark */;
+			42E2B18A1220BA8F000533A9 = 42E2B18A1220BA8F000533A9 /* PBXTextBookmark */;
+			42EA88D31023CD0600F83223 = 42EA88D31023CD0600F83223 /* PBXTextBookmark */;
 		};
 		sourceControlManager = 42F20D8D101BA5A800463F8F /* Source Control */;
 		userBuildSettings = {
@@ -84,6 +82,16 @@
 		vrLen = 339;
 		vrLoc = 0;
 	};
+	42BFCF43139250670095B324 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 42CC9F49101C1F4700FA0833 /* OFDMModel.m */;
+		name = "OFDMModel.m: 90";
+		rLen = 2;
+		rLoc = 1609;
+		rType = 0;
+		vrLen = 743;
+		vrLoc = 1083;
+	};
 	42CC9F48101C1F4700FA0833 /* OFDMModel.h */ = {
 		uiCtxt = {
 			sepNavIntBoundsRect = "{{0, 0}, {519, 330}}";
@@ -94,9 +102,9 @@
 	};
 	42CC9F49101C1F4700FA0833 /* OFDMModel.m */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {564, 1610}}";
-			sepNavSelRange = "{1610, 1}";
-			sepNavVisRange = "{1085, 741}";
+			sepNavIntBoundsRect = "{{0, 0}, {656, 1521}}";
+			sepNavSelRange = "{1609, 2}";
+			sepNavVisRange = "{1083, 743}";
 			sepNavWindowFrame = "{{15, 215}, {750, 558}}";
 		};
 	};
@@ -114,55 +122,15 @@
 			sepNavVisRange = "{276, 449}";
 		};
 	};
-	42CC9F5C101C358A00FA0833 /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 42CC9F48101C1F4700FA0833 /* OFDMModel.h */;
-		name = "OFDMModel.h: 7";
-		rLen = 0;
-		rLoc = 124;
-		rType = 0;
-		vrLen = 171;
-		vrLoc = 0;
-	};
-	42CC9F5D101C358A00FA0833 /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 42CC9F49101C1F4700FA0833 /* OFDMModel.m */;
-		name = "OFDMModel.m: 8";
-		rLen = 0;
-		rLoc = 339;
-		rType = 0;
-		vrLen = 105;
-		vrLoc = 0;
-	};
-	42CC9F6D101C375600FA0833 /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 42CC9F56101C356C00FA0833 /* OFDMController.h */;
-		name = "OFDMController.h: 1";
-		rLen = 0;
-		rLoc = 0;
-		rType = 0;
-		vrLen = 216;
-		vrLoc = 0;
-	};
-	42CC9F6E101C375600FA0833 /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 42CC9F57101C356C00FA0833 /* OFDMController.m */;
-		name = "OFDMController.m: 1";
-		rLen = 0;
-		rLoc = 0;
-		rType = 0;
-		vrLen = 208;
-		vrLoc = 0;
-	};
-	42CE71B8101F8A2800A23D04 /* PBXTextBookmark */ = {
+	42E2B18A1220BA8F000533A9 /* PBXTextBookmark */ = {
 		isa = PBXTextBookmark;
 		fRef = 42CC9F49101C1F4700FA0833 /* OFDMModel.m */;
 		name = "OFDMModel.m: 90";
-		rLen = 0;
-		rLoc = 1611;
+		rLen = 2;
+		rLoc = 1609;
 		rType = 0;
-		vrLen = 741;
-		vrLoc = 1085;
+		vrLen = 744;
+		vrLoc = 1083;
 	};
 	42EA88D31023CD0600F83223 /* PBXTextBookmark */ = {
 		isa = PBXTextBookmark;
@@ -185,6 +153,9 @@
 		configStateDict = {
 		};
 		customDataFormattersEnabled = 1;
+		dataTipCustomDataFormattersEnabled = 1;
+		dataTipShowTypeColumn = 1;
+		dataTipSortType = 0;
 		debuggerPlugin = GDBDebugging;
 		disassemblyDisplayState = 0;
 		dylibVariantSuffix = "";
@@ -197,6 +168,7 @@
 		name = OFDMview;
 		savedGlobals = {
 		};
+		showTypeColumn = 0;
 		sourceDirectories = (
 		);
 		variableFormatDictionary = {
@@ -207,6 +179,9 @@
 		fallbackIsa = XCSourceControlManager;
 		isSCMEnabled = 0;
 		scmConfiguration = {
+			repositoryNamesForRoots = {
+				"" = "";
+			};
 		};
 	};
 	42F20D8E101BA5A800463F8F /* Code sense */ = {
