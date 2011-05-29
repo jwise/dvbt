@@ -119,6 +119,12 @@
 		
 		re *= 10.0;
 		im *= 10.0;
+		
+		if (re < -1.0) re = -1.0;
+		if (re > 1.0) re = 1.0;
+		
+		if (im < -1.0) im = -1.0;
+		if (im > 1.0) im = 1.0;
 
 		[[NSColor redColor] set];
 		NSRectFill(NSMakeRect(75+(re*75), 75+(im*75), 2, 2));
