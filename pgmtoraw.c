@@ -13,12 +13,16 @@ int main()
 	while ((c = getchar()) != EOF)
 	{
 		putchar(c);
-		if ((x++) == 3656)
+		x++;
+		if (x == 3656)
 		{
-			x = 0;
 			for (; x < 3672; x++)
-				putchar(128);
+				putchar(0);
+			x = 0;
 		}
 	}
+	
+	if (x != 0)
+		fprintf(stderr, "WARNING: ended on column %d!\n", x);
 	return 0;
 }
