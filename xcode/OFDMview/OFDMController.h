@@ -14,6 +14,7 @@
 	IBOutlet NSImageView *iview;
 	IBOutlet NSStepper *carrier;
 	IBOutlet NSSlider *offset;
+	IBOutlet NSSlider *freqadjust;
 	
 	OFDMModel *model;
 }

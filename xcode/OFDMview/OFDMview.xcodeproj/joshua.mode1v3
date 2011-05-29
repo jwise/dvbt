@@ -274,8 +274,9 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateSelectionKey</key>
 							<array>
 								<array>
-									<integer>18</integer>
-									<integer>17</integer>
+									<integer>4</integer>
+									<integer>1</integer>
+									<integer>0</integer>
 								</array>
 							</array>
 							<key>PBXSmartGroupTreeModuleOutlineStateVisibleRectKey</key>
@@ -314,7 +315,7 @@
 								<key>PBXProjectModuleGUID</key>
 								<string>1CE0B20306471E060097A5F4</string>
 								<key>PBXProjectModuleLabel</key>
-								<string>OFDMModel.m</string>
+								<string>OFDMController.h</string>
 								<key>PBXSplitModuleInNavigatorKey</key>
 								<dict>
 									<key>Split0</key>
@@ -322,17 +323,17 @@
 										<key>PBXProjectModuleGUID</key>
 										<string>1CE0B20406471E060097A5F4</string>
 										<key>PBXProjectModuleLabel</key>
-										<string>OFDMModel.m</string>
+										<string>OFDMController.h</string>
 										<key>_historyCapacity</key>
 										<integer>0</integer>
 										<key>bookmark</key>
-										<string>42BFCF43139250670095B324</string>
+										<string>42BFCF57139271EA0095B324</string>
 										<key>history</key>
 										<array>
-											<string>424F872E101D715F00F6FE43</string>
-											<string>424F872F101D715F00F6FE43</string>
 											<string>424F8730101D715F00F6FE43</string>
-											<string>42E2B18A1220BA8F000533A9</string>
+											<string>42BFCF54139271EA0095B324</string>
+											<string>42BFCF55139271EA0095B324</string>
+											<string>42BFCF56139271EA0095B324</string>
 										</array>
 									</dict>
 									<key>SplitCount</key>
@@ -528,6 +529,9 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
+		<string>42BFCF59139271EA0095B324</string>
+		<string>42BFCF5A139271EA0095B324</string>
+		<string>1C78EAAD065D492600B07095</string>
 		<string>1CD10A99069EF8BA00B06720</string>
 		<string>42CC9FAB101C3AD700FA0833</string>
 		<string>/Users/joshua/projects/dvbt/xcode/OFDMview/OFDMview.xcodeproj</string>
@@ -898,7 +902,7 @@
 			<key>TableOfContents</key>
 			<array>
 				<string>1C78EAAD065D492600B07095</string>
-				<string>42EA88D51023CD0600F83223</string>
+				<string>42BFCF58139271EA0095B324</string>
 				<string>1C78EAAC065D492600B07095</string>
 			</array>
 			<key>ToolbarConfiguration</key>

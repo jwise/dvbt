@@ -4,6 +4,7 @@
 #import "OFDMModel.h"
 #include <stdlib.h>
 #include <fcntl.h>
+#include <complex.h>
 #include <fftw3.h>
 
 @implementation OFDMModel
@@ -58,6 +59,35 @@
 	
 	close(fd);
 	return 0;
+}
+
+#define FREQ 9142857.1
+- (void) adjust : (int) frq
+{
+	int i;
+	double complex phase;
+	
+	if (frq == 0)
+		return;
+	if (!samples)
+		return;
+	
+	phase = 0.0;
+	
+	for (i = 0; i < (nsamples / 2); i++)
+	{
+		double complex cpx;
+		
+		cpx = samples[i*2] + samples[i*2+1] * 1.0i;
+		
+		phase = 2.0i * M_PI * (double)frq * ((double)i / FREQ);
+		
+		cpx *= cexp(phase);
+		
+		samples[i*2] = creal(cpx);
+		samples[i*2+1] = cimag(cpx);
+	}
+	
 }
 
 #define FFT_SIZE 2048

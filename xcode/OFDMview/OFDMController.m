@@ -19,8 +19,14 @@
 }
 
 - (IBAction) loadFile : (id) sender {
+	
+
 	[nsamples setStringValue:@"Loading data..."];
 	[model loadData:"/Users/joshua/projects/dvbt/dvbt.mixed.raw"];
+	
+	[nsamples setStringValue :@"Frequency adjusting..."];
+	[model adjust :[freqadjust intValue]];
+
 	[nsamples setStringValue:@"Running FFT..."];
 	[model runFFT :[offset intValue]];
 	[nsamples setIntValue:[model getSampleCount]];
