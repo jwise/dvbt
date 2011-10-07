@@ -25,25 +25,24 @@
 	[model loadData:"/Users/joshua/projects/dvbt/dvbt.mixed.raw"];
 	
 	[nsamples setStringValue :@"Frequency adjusting..."];
-	[model adjust :[freqadjust intValue]];
+	[model adjust :([freqadjust doubleValue] / 10.0)];
 
 	[nsamples setStringValue:@"Running FFT..."];
-	[model runFFT :[offset intValue]];
+	[self rerunFFT :sender];
 	[nsamples setIntValue:[model getSampleCount]];
-	[self rerenderConstellation:sender];
 }
 
 - (IBAction) rerunFFT : (id) sender {
-	[model runFFT :[offset intValue]];
+	[lowerspec setImage: [[NSImage alloc] initWithSize: NSMakeSize(150, 150)]];
+	[upperspec setImage: [[NSImage alloc] initWithSize: NSMakeSize(150, 150)]];
+
+	[model runFFT :[offset intValue] :[lowerspec image] :[upperspec image]];
 	[self rerenderConstellation:sender];
 }
 
 - (IBAction) rerenderConstellation : (id) sender {
 	[iview setImage: [[NSImage alloc] initWithSize: NSMakeSize(150, 150)]];
-	
-	[[iview image] lockFocus];
-	[model constellationIter :self :[carrier intValue]];
-	[[iview image] unlockFocus];
+	[model constellationIter :self :[carrier intValue] :[iview image]];
 }
 
 @end

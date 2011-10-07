@@ -12,9 +12,9 @@
 }
 
 - (int)loadData :(char*)filename;
-- (void)adjust : (int)frq;
+- (void)adjust : (double)frq;
 - (int)getSampleCount;
-- (void)runFFT : (int)startsamp;
-- (void)constellationIter :(id)sender :(int)carrier;
+- (void)runFFT : (int)startsamp :(id)lower :(id)upper;
+- (void)constellationIter :(id)sender :(int)carrier :(id)constellation;
 
 @end

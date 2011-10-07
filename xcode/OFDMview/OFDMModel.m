@@ -62,7 +62,7 @@
 }
 
 #define FREQ 9142857.1
-- (void) adjust : (int) frq
+- (void) adjust : (double) frq
 {
 	int i;
 	double complex phase;
@@ -91,8 +91,10 @@
 }
 
 #define FFT_SIZE 2048
-- (void) runFFT : (int) startsamp
+- (void) runFFT : (int) startsamp :(id)lower :(id)upper
 {
+	double avgs[FFT_SIZE];
+	double maxamp;
 	fftw_complex *in, *out;
 	fftw_plan p;
 	int i;
@@ -108,6 +110,9 @@
 	out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * FFT_SIZE);
 	p = fftw_plan_dft_1d(FFT_SIZE, in, out, FFTW_FORWARD, FFTW_MEASURE);
 	
+	for (i = 0; i < FFT_SIZE; i++)
+		avgs[i] = 0;
+	
 	i = startsamp*2;
 	symbols = malloc(nsamples * sizeof(double));
 	while ((i + FFT_SIZE * 2) < nsamples)
@@ -118,6 +123,10 @@
 			in[j][1] = in[j][1];
 		fftw_execute(p);
 		memcpy(symbols + (nsymbols * FFT_SIZE), out, sizeof(double) * FFT_SIZE * 2);
+		
+		for (j = 0; j < FFT_SIZE; j++)
+			avgs[j] += sqrt(out[j][0]*out[j][0] + out[j][1]*out[j][1]);
+		
 		nsymbols++;
 		i += (FFT_SIZE * 2);
 		i += (FFT_SIZE * 2) / 32;	/* guard interval */
@@ -126,14 +135,44 @@
 	fftw_destroy_plan(p);
 	fftw_free(in);
 	fftw_free(out);
+	
+	maxamp = 0;
+	for (i = 0; i < FFT_SIZE; i++)
+		if (avgs[i] > maxamp)
+			maxamp = avgs[i];
+	
+	[lower lockFocus];
+	[[NSColor blackColor] set];
+	NSRectFill(NSMakeRect(0, 0, 150, 150));
+	[[NSColor redColor] set];
+	for (i = 0; i < 150; i++)
+	{
+		int h = (avgs[i - 925 + FFT_SIZE] / maxamp) * 100;
+		NSRectFill(NSMakeRect(i, h+25, 2, 2));
+	}
+	[lower unlockFocus];
+	
+	[upper lockFocus];
+	[[NSColor blackColor] set];
+	NSRectFill(NSMakeRect(0, 0, 150, 150));
+	[[NSColor redColor] set];
+	for (i = 0; i < 150; i++)
+	{
+		int h = (avgs[i + 775] / maxamp) * 100;
+		NSRectFill(NSMakeRect(i, h+25, 2, 2));
+	}
+	[upper unlockFocus];
+
 }
 
-- (void) constellationIter : (id) sender : (int) carrier
+- (void) constellationIter : (id) sender : (int) carrier :(id)constellation
 {
 	int i;
 	
 	if (carrier < 0)
 		carrier += FFT_SIZE;
+	
+	[constellation lockFocus];
 	
 	[[NSColor blackColor] set];
 	NSRectFill(NSMakeRect(0, 0, 150, 150));
@@ -156,9 +195,12 @@
 		if (im < -1.0) im = -1.0;
 		if (im > 1.0) im = 1.0;
 
-		[[NSColor redColor] set];
+		float h = (float)i / (float)nsymbols;
+		[[NSColor colorWithCalibratedHue :h saturation:1.0 brightness:1.0 alpha:1.0] set];
 		NSRectFill(NSMakeRect(75+(re*75), 75+(im*75), 2, 2));
 	}
+	[constellation unlockFocus];
+	
 }
 
 @end

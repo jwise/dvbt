@@ -12,6 +12,8 @@
 @interface OFDMController : NSObject {
 	IBOutlet NSTextField *nsamples;
 	IBOutlet NSImageView *iview;
+	IBOutlet NSImageView *lowerspec;
+	IBOutlet NSImageView *upperspec;
 	IBOutlet NSStepper *carrier;
 	IBOutlet NSSlider *offset;
 	IBOutlet NSSlider *freqadjust;
