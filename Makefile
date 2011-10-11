@@ -1,7 +1,7 @@
 LDFLAGS=-lm
 CFLAGS=-O3
 
-all: dvbt.mixed.raw pgmtoraw downmix ofdmvis
+all: dvbt.mixed.raw pgmtoraw downmix ofdmvis ml-estimation
 
 dvbt.mixed.raw: dvbt.raw downmix
 	./downmix
@@ -14,3 +14,6 @@ dvbt.raw: dvbt.pgm pgmtoraw
 
 ofdmvis: ofdmvis.c
 	gcc -o ofdmvis `/opt/local/bin/sdl-config --libs --cflags` ofdmvis.c /opt/local/lib/libfftw3.a
+
+ml-estimation: ml-estimation.c
+	gcc -o ml-estimation ml-estimation.c -O3
