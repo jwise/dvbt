@@ -49,6 +49,9 @@ double ml_Phi(double complex *r, int m)
 	return sig * 0.5;
 }
 
+#define FREQ 9142857.1
+#define OFSFRQ /*43.2*/ /*180.0*/ 0.0
+
 int main()
 {
 	int ofs = 0;
@@ -68,7 +71,12 @@ int main()
 		double rho = SNR / (SNR + 1.0);
 		
 		for (i = 0; i < (2*N+L); i++)
+		{
+			double complex phase;
+			phase = 2.0i * M_PI * (double)OFSFRQ * ((double)(ofs+i) / FREQ);
 			samples[i] = sampbuf[i*2] + sampbuf[i*2+1] * 1.0i;
+			samples[i] *= cexp(phase);
+		}
 		
 		for (i = 0; i < (2*N); i++)
 		{
@@ -84,7 +92,7 @@ int main()
 		 * expectations.  Hmm...  */
 		epsilon = (-1.0 / (2.0 * M_PI)) * carg(ml_gamma(samples, argmax));
 		
-		printf("%d %d %lf\n", ofs, argmax, epsilon);
+		printf("%d %d %lf %lf\n", ofs, argmax, epsilon, epsilon * FREQ / 2048.0);
 		
 		ofs += N+L;
 		memmove(sampbuf, sampbuf + (N+L)*2, sizeof(double) * (N+L)*2);
