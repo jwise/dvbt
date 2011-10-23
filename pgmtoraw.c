@@ -14,6 +14,8 @@ int main()
 	{
 		putchar(c);
 		x++;
+		
+		/* hblank */
 		if (x == 3656)
 		{
 			for (; x < 3672; x++)
@@ -24,5 +26,11 @@ int main()
 	
 	if (x != 0)
 		fprintf(stderr, "WARNING: ended on column %d!\n", x);
+	
+	/* vblank */
+	for (i = 0; i < 2; i++)
+		for (x = 0; x < 3672; x++)
+			putchar(0);
+	
 	return 0;
 }
