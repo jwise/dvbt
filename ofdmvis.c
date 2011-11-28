@@ -6,19 +6,37 @@
 #include <assert.h>
 
 /* XXX: struct */
-double *samples;
-int nsamples;
 fftw_complex *symbols;
 int nsymbols;
 
-int loadfile(char *filename)
+typedef struct ofdm_state {
+	/* Parameters */
+	int fft_size; /* FFT size */
+	int guard_len; /* guard length */
+	
+	/* Sample receiver */
+	int cursamp;
+	int nsamples;
+	double *samples;
+	
+	/* Estimator */
+	
+	/* FFT */
+	fftw_complex *fft_in;
+	int fft_symcount;
+	int fft_dbg_carrier;
+	SDL_Surface *fft_surf;
+	
+	SDL_Surface *master;
+} ofdm_state_t;
+
+int ofdm_load(struct ofdm_state *ofdm, char *filename)
 {
 	int allocsize;
 	int fd, rv;
 	
-	free(samples);
-	samples = NULL;
-	nsamples = 0;
+	ofdm->samples = NULL;
+	ofdm->nsamples = 0;
 	
 	fd = open(filename, O_RDONLY);
 	if (fd < 0)
@@ -26,108 +44,50 @@ int loadfile(char *filename)
 	
 	allocsize = 0;
 	do {
-		if (nsamples == allocsize)
+		if (ofdm->nsamples == allocsize)
 		{
 			allocsize += 2048;
-			samples = realloc(samples, allocsize * sizeof(double));
-			if (!samples)
+			ofdm->samples = realloc(ofdm->samples, allocsize * sizeof(double));
+			if (!ofdm->samples)
 			{
-				nsamples = 0;
+				ofdm->nsamples = 0;
 				close(fd);
 				return -1;
 			}
 		}
-		rv = read(fd, samples + nsamples, (allocsize - nsamples) * sizeof(double));
+		rv = read(fd, ofdm->samples + ofdm->nsamples, (allocsize - ofdm->nsamples) * sizeof(double));
 		if (rv > 0)
-			nsamples += (rv / sizeof(double));
+			ofdm->nsamples += (rv / sizeof(double));
 	} while (rv > 0);
 	
+	ofdm->nsamples /= 2;
+	
 	close(fd);
+	
 	return 0;
 }
 
-#define FREQ 9142857.1
-void adjust(double frq)
+void ofdm_getsamples(ofdm_state_t *ofdm, int nreq, fftw_complex *out)
 {
-	int i;
-	double complex phase;
-	
-	if (frq == 0)
-		return;
-	if (!samples)
-		return;
-	
-	phase = 0.0;
-	
-	for (i = 0; i < (nsamples / 2); i++)
+	while (nreq--)
 	{
-		double complex cpx;
-		
-		cpx = samples[i*2] + samples[i*2+1] * 1.0i;
-		
-		phase = 2.0i * M_PI * (double)frq * ((double)i / FREQ);
-		
-		cpx *= cexp(phase);
-		
-		samples[i*2] = creal(cpx);
-		samples[i*2+1] = cimag(cpx);
+		(*out)[0] = ofdm->samples[ofdm->cursamp*2];
+		(*out)[1] = ofdm->samples[ofdm->cursamp*2+1];
+		out++;
+		ofdm->cursamp = (ofdm->cursamp + 1) % ofdm->nsamples;
 	}
 }
 
-#define FFT_SIZE 2048
-void runFFT(int startsamp)
+void ofdm_estimate_symbol(ofdm_state_t *ofdm, fftw_complex *sym)
 {
-	double avgs[FFT_SIZE];
-	double maxamp;
-	fftw_complex *in, *out;
-	fftw_plan p;
-	int i;
-	
-	if (!samples)
-		return;
-	free(symbols);
-	nsymbols = 0;
-	symbols = NULL;
-	
-	assert(sizeof(fftw_complex) == (sizeof(double) * 2));
-	in = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * FFT_SIZE);
-	out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * FFT_SIZE);
-	p = fftw_plan_dft_1d(FFT_SIZE, in, out, FFTW_FORWARD, FFTW_MEASURE);
-	
-	for (i = 0; i < FFT_SIZE; i++)
-		avgs[i] = 0;
-	
-	i = startsamp*2;
-	symbols = malloc(nsamples * sizeof(double));
-	while ((i + FFT_SIZE * 2) < nsamples)
-	{
-		int j;
-		memcpy(in, samples + i, sizeof(double) * FFT_SIZE * 2);
-		for (j = 0; j < FFT_SIZE; j++)
-			in[j][1] = in[j][1];
-		fftw_execute(p);
-		memcpy(symbols + (nsymbols * FFT_SIZE), out, sizeof(double) * FFT_SIZE * 2);
-		
-		for (j = 0; j < FFT_SIZE; j++)
-			avgs[j] += sqrt(out[j][0]*out[j][0] + out[j][1]*out[j][1]);
-		
-		nsymbols++;
-		i += (FFT_SIZE * 2);
-		i += (FFT_SIZE * 2) / 32;	/* guard interval */
-	}
-	
-	fftw_destroy_plan(p);
-	fftw_free(in);
-	fftw_free(out);
-	
-	maxamp = 0;
-	for (i = 0; i < FFT_SIZE; i++)
-		if (avgs[i] > maxamp)
-			maxamp = avgs[i];
-}
+	fftw_complex *p = alloca(ofdm->guard_len * sizeof(fftw_complex));
 
-#define XRES 240
-#define YRES 240
+	/* Do the simplest possible thing to begin with. */
+	ofdm_getsamples(ofdm, ofdm->fft_size, sym);
+	ofdm_getsamples(ofdm, ofdm->guard_len, p);
+
+#warning XXX: estimate_symbol doesn't
+}
 
 uint32_t hsvtorgb(float H, float S, float V)
 {
@@ -158,59 +118,86 @@ uint32_t hsvtorgb(float H, float S, float V)
 	return ri + (gi << 8) + (bi << 16);
 }
 
-void render(SDL_Surface *screen, int carrier)
+#define CONST_XRES 240
+#define CONST_YRES 240
+
+void ofdm_fft_debug(ofdm_state_t *ofdm, fftw_complex *carriers)
 {
-	Uint8 *buffer;
+	fftw_complex *p;
 	SDL_Rect r;
-	int i;
-	if (carrier < 0)
-		carrier += FFT_SIZE;
+	double re, im;
 	
-	SDL_LockSurface(screen);
-	buffer = (Uint8*)screen->pixels;
-	
-	r.x = r.y = 0;
-	r.w = XRES;
-	r.h = YRES;
-	SDL_FillRect(screen, &r, 0);
-	
-	for (i = 0; i < nsymbols; i++)
+	if (!ofdm->fft_surf)
 	{
-		fftw_complex *p;
-		double re, im;
-		
-		p = symbols + i*FFT_SIZE + carrier;
-		re = (*p)[0];
-		im = (*p)[1];
-		
-		re *= 10.0;
-		im *= 10.0;
-		
-		if (re < -1.0) re = -1.0;
-		if (re > 1.0) re = 1.0;
-		
-		if (im < -1.0) im = -1.0;
-		if (im > 1.0) im = 1.0;
-
-		float h = (float)i / (float)nsymbols;
-		r.x = XRES/2 + re * XRES/2;
-		r.y = YRES/2 + im * YRES/2;
-		r.w = r.h = 2;
-		SDL_FillRect(screen, &r, hsvtorgb(h, 1.0, 1.0));
+		ofdm->fft_surf = SDL_CreateRGBSurface(SDL_SWSURFACE, CONST_XRES, CONST_YRES, 24, 0, 0, 0, 0);
+		r.x = r.y = 0;
+		r.w = CONST_XRES;
+		r.h = CONST_YRES;
+		SDL_FillRect(ofdm->fft_surf, &r, 0);
 	}
-
-	SDL_UpdateRect(screen, 0, 0, 0, 0);
 	
-	SDL_UnlockSurface(screen);
+	ofdm->fft_symcount++;
+	
+	p = carriers + ofdm->fft_dbg_carrier;
+	re = (*p)[0];
+	im = (*p)[1];
+	
+	re *= 10.0;
+	im *= 10.0;
+	
+	if (re < -1.0) re = -1.0;
+	if (re > 1.0)  re = 1.0;
+	
+	if (im < -1.0) im = -1.0;
+	if (im > 1.0)  im = 1.0;
+	
+	float h = (float)ofdm->fft_symcount / 150.0;
+	h -= floor(h);
+	r.x = CONST_XRES/2 + re * CONST_XRES/2;
+	r.y = CONST_YRES/2 + im * CONST_YRES/2;
+	r.w = r.h = 2;
+	
+	SDL_FillRect(ofdm->fft_surf, &r, hsvtorgb(h, 1.0, 1.0));
 }
+
+void ofdm_fft_symbol(ofdm_state_t *ofdm, fftw_complex *carriers)
+{
+	fftw_plan p;
+	fftw_complex *in;
+	
+	if (!ofdm->fft_in)
+		ofdm->fft_in = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * ofdm->fft_size);
+	assert(ofdm->fft_in);
+	
+	/* Why MEASURE?  Well, fftw wisdom will save us in the long term. */
+	p = fftw_plan_dft_1d(ofdm->fft_size, ofdm->fft_in, carriers, FFTW_FORWARD, FFTW_MEASURE);
+	
+	ofdm_estimate_symbol(ofdm, ofdm->fft_in);
+	
+	fftw_execute(p);
+	
+	fftw_destroy_plan(p);
+	
+	/* Debug tap in the pipeline. */
+	ofdm_fft_debug(ofdm, carriers);
+}
+
+#define XRES CONST_XRES
+#define YRES CONST_YRES
 
 int main(int argc, char** argv)
 {
+	struct ofdm_state ofdm = {0};
 	SDL_Surface *screen;
 	SDL_Event ev;
 	int guard_ofs = 0;
 	int carrier = 853;
 	float frqshift = 0;
+	
+	ofdm.fft_size = 2048;
+	ofdm.guard_len = ofdm.fft_size / 32;
+	
+	fftw_complex *outbuf = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * ofdm.fft_size);
 	
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
 	{
@@ -219,14 +206,14 @@ int main(int argc, char** argv)
 	}
 	atexit(SDL_Quit);
 	
-	screen = SDL_SetVideoMode(XRES, YRES, 24, SDL_SWSURFACE);
-	if (!screen)
+	ofdm.master = SDL_SetVideoMode(XRES, YRES, 24, SDL_SWSURFACE);
+	if (!ofdm.master)
 	{
 		printf("SDL video init failed: %s\n", SDL_GetError());
 		exit(1);
 	}
 	
-	if (loadfile("dvbt.mixed.raw") < 0)
+	if (ofdm_load(&ofdm, "dvbt.mixed.raw") < 0)
 	{
 		printf("failed to load file\n");
 		exit(1);
@@ -234,14 +221,17 @@ int main(int argc, char** argv)
 	
 	SDL_WM_SetCaption("OFDM Visualizer", "ofdmvis");
 	
-	runFFT(guard_ofs);
-	render(screen, carrier);
-	
 	while (SDL_WaitEvent(&ev))
 	{
 		int need_reload = 0;
 		int need_rerender = 0;
 		int need_refft = 0;
+		
+		ofdm_fft_symbol(&ofdm, outbuf);
+		
+		if (ofdm.fft_surf)
+			SDL_BlitSurface(ofdm.fft_surf, NULL, ofdm.master, NULL);
+		SDL_Flip(ofdm.master);
 		
 		switch (ev.type) {
 		case SDL_KEYDOWN:
@@ -276,16 +266,6 @@ int main(int argc, char** argv)
 		case SDL_QUIT:
 			exit(0);
 		}
-		
-		if (need_reload) {
-			loadfile("dvbt.mixed.raw");
-			adjust(frqshift);
-		}
-			
-		if (need_refft || need_reload)
-			runFFT(guard_ofs);
-		if (need_rerender || need_refft || need_reload)
-			render(screen, carrier);
 	}
 	
 	exit(0);
