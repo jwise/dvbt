@@ -22,7 +22,9 @@ typedef struct ofdm_state {
 	/* Estimator */
 	
 	/* FFT */
+	fftw_plan fft_plan;
 	fftw_complex *fft_in;
+	fftw_complex *fft_out;
 	int fft_symcount;
 	int fft_dbg_carrier;
 	SDL_Surface *fft_surf;
@@ -160,35 +162,78 @@ void ofdm_fft_debug(ofdm_state_t *ofdm, fftw_complex *carriers)
 	SDL_FillRect(ofdm->fft_surf, &r, hsvtorgb(h, 1.0, 1.0));
 }
 
-void ofdm_fft_symbol(ofdm_state_t *ofdm, fftw_complex *carriers)
+void ofdm_fft_symbol(ofdm_state_t *ofdm)
 {
-	fftw_plan p;
-	fftw_complex *in;
-	
 	if (!ofdm->fft_in)
 		ofdm->fft_in = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * ofdm->fft_size);
 	assert(ofdm->fft_in);
+	if (!ofdm->fft_out)
+		ofdm->fft_out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * ofdm->fft_size);
+	assert(ofdm->fft_out);
 	
 	/* Why MEASURE?  Well, fftw wisdom will save us in the long term. */
-	p = fftw_plan_dft_1d(ofdm->fft_size, ofdm->fft_in, carriers, FFTW_FORWARD, FFTW_MEASURE);
+	if (!ofdm->fft_plan)
+		ofdm->fft_plan = fftw_plan_dft_1d(ofdm->fft_size, ofdm->fft_in, ofdm->fft_out, FFTW_FORWARD, FFTW_MEASURE);
+	assert(ofdm->fft_plan);
 	
 	ofdm_estimate_symbol(ofdm, ofdm->fft_in);
 	
-	fftw_execute(p);
-	
-	fftw_destroy_plan(p);
+	fftw_execute(ofdm->fft_plan);
 	
 	/* Debug tap in the pipeline. */
-	ofdm_fft_debug(ofdm, carriers);
+	ofdm_fft_debug(ofdm, ofdm->fft_out);
 }
+
+/* Rendering bits */
 
 #define XRES CONST_XRES
 #define YRES CONST_YRES
 
+void ofdm_render(ofdm_state_t *ofdm, SDL_Surface *master, int x, int y)
+{
+	SDL_Rect dst;
+	
+	if (ofdm->fft_surf)
+	{
+		dst.x = x;
+		dst.y = y;
+		dst.w = CONST_XRES;
+		dst.h = CONST_YRES;
+		SDL_BlitSurface(ofdm->fft_surf, NULL, master, &dst);
+	}
+}
+
+/* Main SDL goop */
+
+static ofdm_state_t ofdm = {0};
+static SDL_Surface *master;
+
+static void update()
+{
+	static int last = 0;
+	
+	ofdm_fft_symbol(&ofdm);
+	if (SDL_GetTicks() > (last + 100))
+	{
+		ofdm_render(&ofdm, master, 0, 0);
+		SDL_Flip(master);
+		
+		last = SDL_GetTicks();
+	}
+}
+
+static Uint32 tick(Uint32 interval)
+{
+	SDL_Event ev;
+	
+	ev.type = SDL_USEREVENT;
+	SDL_PushEvent(&ev);
+	
+	return interval;
+}
+
 int main(int argc, char** argv)
 {
-	struct ofdm_state ofdm = {0};
-	SDL_Surface *screen;
 	SDL_Event ev;
 	int guard_ofs = 0;
 	int carrier = 853;
@@ -197,8 +242,6 @@ int main(int argc, char** argv)
 	ofdm.fft_size = 2048;
 	ofdm.guard_len = ofdm.fft_size / 32;
 	
-	fftw_complex *outbuf = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * ofdm.fft_size);
-	
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
 	{
 		printf("SDL init failed: %s\n", SDL_GetError());
@@ -206,8 +249,8 @@ int main(int argc, char** argv)
 	}
 	atexit(SDL_Quit);
 	
-	ofdm.master = SDL_SetVideoMode(XRES, YRES, 24, SDL_SWSURFACE);
-	if (!ofdm.master)
+	master = SDL_SetVideoMode(XRES, YRES, 24, SDL_SWSURFACE);
+	if (!master)
 	{
 		printf("SDL video init failed: %s\n", SDL_GetError());
 		exit(1);
@@ -221,17 +264,13 @@ int main(int argc, char** argv)
 	
 	SDL_WM_SetCaption("OFDM Visualizer", "ofdmvis");
 	
+	SDL_SetTimer(10, tick);
+	
 	while (SDL_WaitEvent(&ev))
 	{
 		int need_reload = 0;
 		int need_rerender = 0;
 		int need_refft = 0;
-		
-		ofdm_fft_symbol(&ofdm, outbuf);
-		
-		if (ofdm.fft_surf)
-			SDL_BlitSurface(ofdm.fft_surf, NULL, ofdm.master, NULL);
-		SDL_Flip(ofdm.master);
 		
 		switch (ev.type) {
 		case SDL_KEYDOWN:
@@ -262,6 +301,9 @@ int main(int argc, char** argv)
 				need_reload = 1;
 			}
 			
+			break;
+		case SDL_USEREVENT:
+			update();
 			break;
 		case SDL_QUIT:
 			exit(0);
