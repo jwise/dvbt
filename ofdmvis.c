@@ -152,7 +152,8 @@ void ofdm_estimate_symbol(ofdm_state_t *ofdm, fftw_complex *sym)
 		}
 	}
 	
-	/* Now we have an estimation at argmax. */
+	/* Now we have an estimation at argmax.  Should it eventually get a
+	 * low pass filter?  */
 	double epsilon = (-1.0 / (2.0 * M_PI)) * carg(bestgam);
 	
 	for (k = 0; k < N; k++)
@@ -160,6 +161,11 @@ void ofdm_estimate_symbol(ofdm_state_t *ofdm, fftw_complex *sym)
 		double complex c;
 		
 		c = C(k + L + argmax);
+		
+		/* Science fact: the correct value for epsilon in Fabrice's
+		 * input set is .01, pretty much exactly.  WTF?
+		 */
+		
 		ofdm->estim_phase += 2.0i * M_PI * ((epsilon + .05 /* ??? */) / (double)N);
 		c *= cexp(ofdm->estim_phase);
 		
