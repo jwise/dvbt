@@ -211,8 +211,10 @@ void ofdm_estimate_symbol(ofdm_state_t *ofdm, fftw_complex *sym)
 	
 	/* Avoid excessive phase jitter by quantizing argmax if it's "almost right" --
 	 * a poor man's way of "leaving acquisition mode". */
-	if (argmax >= L && argmax < 3 * L / 2)
+	if (argmax >= (L - 2) && argmax < 3 * L / 2)
 		argmax = L;
+	else
+		printf("estimator is feeling a little nervous about argmax %d...\n", argmax);
 
 	double epsilon = (-1.0 / (2.0 * M_PI)) * carg(bestgam);
 	
