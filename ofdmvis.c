@@ -303,6 +303,11 @@ void ofdm_render(ofdm_state_t *ofdm, SDL_Surface *master, int x, int y)
 	}
 }
 
+void ofdm_clear(ofdm_state_t *ofdm)
+{
+	SDL_FillRect(ofdm->fft_surf, NULL, 0x0);
+}
+
 /* Main SDL goop */
 
 static ofdm_state_t ofdm = {0};
@@ -371,10 +376,6 @@ int main(int argc, char** argv)
 	
 	while (SDL_WaitEvent(&ev))
 	{
-		int need_reload = 0;
-		int need_rerender = 0;
-		int need_refft = 0;
-		
 		switch (ev.type) {
 		case SDL_KEYDOWN:
 			if (ev.key.keysym.sym == SDLK_ESCAPE ||
@@ -383,25 +384,13 @@ int main(int argc, char** argv)
 			else if (ev.key.keysym.sym == SDLK_LEFT) {
 				ofdm.fft_dbg_carrier--;
 				printf("Viewing carrier %d\n", ofdm.fft_dbg_carrier);
-				need_rerender = 1;
+				ofdm_clear(&ofdm);
 			} else if (ev.key.keysym.sym == SDLK_RIGHT) {
 				ofdm.fft_dbg_carrier++;
 				printf("Viewing carrier %d\n", ofdm.fft_dbg_carrier);
-				need_rerender = 1;
-			} else if (ev.key.keysym.sym == SDLK_g) {
-				if (ev.key.keysym.mod & KMOD_SHIFT)
-					guard_ofs++;
-				else
-					guard_ofs--;
-				printf("Guard offset %d\n", guard_ofs);
-				need_refft = 1;
-			} else if (ev.key.keysym.sym == SDLK_f) {
-				if (ev.key.keysym.mod & KMOD_SHIFT)
-					frqshift++;
-				else
-					frqshift--;
-				printf("Frequency shift %f\n", frqshift);
-				need_reload = 1;
+				ofdm_clear(&ofdm);
+			} else if (ev.key.keysym.sym == SDLK_SPACE) {
+				ofdm_clear(&ofdm);
 			}
 			
 			break;
