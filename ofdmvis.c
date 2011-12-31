@@ -279,9 +279,9 @@ uint32_t hsvtorgb(float H, float S, float V)
 
 void ofdm_fft_debug(ofdm_state_t *ofdm, fftw_complex *carriers)
 {
-	fftw_complex *p;
 	SDL_Rect r;
 	double re, im;
+	double complex p1, p2;
 	
 	if (!ofdm->fft_surf)
 	{
@@ -294,9 +294,16 @@ void ofdm_fft_debug(ofdm_state_t *ofdm, fftw_complex *carriers)
 	
 	ofdm->fft_symcount++;
 	
-	p = carriers + CARRIER(ofdm, ofdm->fft_dbg_carrier);
-	re = (*p)[0];
-	im = (*p)[1];
+	/* HACK HACK: match phase to carrier 0 */
+	p1 = carriers[CARRIER(ofdm, 0)][0] +
+	    carriers[CARRIER(ofdm, 0)][1]*1i;
+	p2 = carriers[CARRIER(ofdm, ofdm->fft_dbg_carrier)][0] +
+	    carriers[CARRIER(ofdm, ofdm->fft_dbg_carrier)][1]*1i;
+	p2 *= cexp(-carg(p1)*1i);
+	    
+	re = creal(p2);
+	im = cimag(p2);
+	
 	
 	re *= 10.0;
 	im *= 10.0;
