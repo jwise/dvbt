@@ -152,8 +152,11 @@ void ofdm_estimate_symbol(ofdm_state_t *ofdm, fftw_complex *sym)
 		}
 	}
 	
-	/* Now we have an estimation at argmax.  Should it eventually get a
-	 * low pass filter?  */
+	/* Avoid excessive phase jitter by quantizing argmax if it's "almost right" --
+	 * a poor man's way of "leaving acquisition mode". */
+	if (argmax >= L && argmax < 3 * L / 2)
+		argmax = L;
+
 	double epsilon = (-1.0 / (2.0 * M_PI)) * carg(bestgam);
 	
 	for (k = 0; k < N; k++)
