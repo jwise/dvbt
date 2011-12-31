@@ -407,8 +407,7 @@ static Uint32 tick(Uint32 interval)
 int main(int argc, char** argv)
 {
 	SDL_Event ev;
-	int guard_ofs = 0;
-	float frqshift = 0;
+	int new_carrier = -1;
 	
 	ofdm_init_constants();
 	
@@ -419,7 +418,7 @@ int main(int argc, char** argv)
 	ofdm.k_min = -851;
 	ofdm.tps_carriers = _tps_carriers_2048;
 	ofdm.continual_pilots = _continual_pilots_2048;
-	ofdm.fft_dbg_carrier = 1704;
+	ofdm.fft_dbg_carrier = 1491;
 	ofdm.snr = 100.0; /* 20dB */
 	
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
@@ -450,19 +449,40 @@ int main(int argc, char** argv)
 	{
 		switch (ev.type) {
 		case SDL_KEYDOWN:
-			if (ev.key.keysym.sym == SDLK_ESCAPE ||
-			    ev.key.keysym.sym == SDLK_q)
+			switch (ev.key.keysym.sym) {
+			case SDLK_ESCAPE:
+			case SDLK_q:
 			    	exit(0);
-			else if (ev.key.keysym.sym == SDLK_LEFT) {
-				ofdm.fft_dbg_carrier--;
+			case SDLK_LEFT:
+			case SDLK_RIGHT:
+				ofdm.fft_dbg_carrier += (ev.key.keysym.sym == SDLK_LEFT) ? -1 : 1;
 				printf("Viewing carrier %d\n", ofdm.fft_dbg_carrier);
 				ofdm_clear(&ofdm);
-			} else if (ev.key.keysym.sym == SDLK_RIGHT) {
-				ofdm.fft_dbg_carrier++;
-				printf("Viewing carrier %d\n", ofdm.fft_dbg_carrier);
+				break;
+			case SDLK_SPACE:
 				ofdm_clear(&ofdm);
-			} else if (ev.key.keysym.sym == SDLK_SPACE) {
-				ofdm_clear(&ofdm);
+				break;
+			case SDLK_RETURN:
+				if (new_carrier != -1) {
+					ofdm.fft_dbg_carrier = new_carrier;
+					printf("Viewing carrier %d\n", ofdm.fft_dbg_carrier);
+					ofdm_clear(&ofdm);
+					new_carrier = -1;
+				}
+				break;
+			case SDLK_g:
+				new_carrier = 0;
+				break;
+			case SDLK_0: if (new_carrier == -1) break; new_carrier *= 10; new_carrier += 0; break;
+			case SDLK_1: if (new_carrier == -1) break; new_carrier *= 10; new_carrier += 1; break;
+			case SDLK_2: if (new_carrier == -1) break; new_carrier *= 10; new_carrier += 2; break;
+			case SDLK_3: if (new_carrier == -1) break; new_carrier *= 10; new_carrier += 3; break;
+			case SDLK_4: if (new_carrier == -1) break; new_carrier *= 10; new_carrier += 4; break;
+			case SDLK_5: if (new_carrier == -1) break; new_carrier *= 10; new_carrier += 5; break;
+			case SDLK_6: if (new_carrier == -1) break; new_carrier *= 10; new_carrier += 6; break;
+			case SDLK_7: if (new_carrier == -1) break; new_carrier *= 10; new_carrier += 7; break;
+			case SDLK_8: if (new_carrier == -1) break; new_carrier *= 10; new_carrier += 8; break;
+			case SDLK_9: if (new_carrier == -1) break; new_carrier *= 10; new_carrier += 9; break;
 			}
 			
 			break;
