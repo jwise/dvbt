@@ -292,7 +292,7 @@ void ofdm_fft_debug(ofdm_state_t *ofdm, fftw_complex *carriers)
 	
 	ofdm->fft_symcount++;
 	
-	p = carriers + ofdm->fft_dbg_carrier;
+	p = carriers + CARRIER(ofdm, ofdm->fft_dbg_carrier);
 	re = (*p)[0];
 	im = (*p)[1];
 	
@@ -412,7 +412,7 @@ int main(int argc, char** argv)
 	ofdm.k_min = -851;
 	ofdm.tps_carriers = _tps_carriers_2048;
 	ofdm.continual_pilots = _continual_pilots_2048;
-	ofdm.fft_dbg_carrier = CARRIER(&ofdm, 1704);
+	ofdm.fft_dbg_carrier = 1704;
 	ofdm.snr = 100.0; /* 20dB */
 	
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
