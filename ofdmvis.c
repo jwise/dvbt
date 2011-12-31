@@ -290,6 +290,16 @@ void ofdm_render(ofdm_state_t *ofdm, SDL_Surface *master, int x, int y)
 		dst.w = CONST_XRES;
 		dst.h = CONST_YRES;
 		SDL_BlitSurface(ofdm->fft_surf, NULL, master, &dst);
+		dst.x = x + CONST_XRES / 2;
+		dst.y = y;
+		dst.w = 1;
+		dst.h = CONST_YRES;
+		SDL_FillRect(master, &dst, 0xFFFFFFFF);
+		dst.y = y + CONST_YRES / 2;
+		dst.x = x;
+		dst.h = 1;
+		dst.w = CONST_XRES;
+		SDL_FillRect(master, &dst, 0xFFFFFFFF);
 	}
 }
 
