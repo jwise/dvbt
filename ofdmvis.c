@@ -241,8 +241,6 @@ void ofdm_estimate_symbol(ofdm_state_t *ofdm, fftw_complex *sym)
 #undef GAM
 #undef PHI
 #undef C	
-	
-	printf("adj: %d %f\n", argmax, epsilon);
 }	
 
 uint32_t hsvtorgb(float H, float S, float V)
