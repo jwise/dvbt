@@ -13,7 +13,7 @@ dvbt.raw: dvbt.pgm pgmtoraw
 	./pgmtoraw < dvbt.pgm > dvbt.raw
 
 ofdmvis: ofdmvis.c
-	gcc -o ofdmvis `/opt/local/bin/sdl-config --libs --cflags` ofdmvis.c /opt/local/lib/libfftw3.a
+	gcc -o ofdmvis `sdl-config --libs --cflags` ofdmvis.c -lfftw3
 
 ml-estimation: ml-estimation.c
 	gcc -o ml-estimation ml-estimation.c -O3
