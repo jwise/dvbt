@@ -4,6 +4,7 @@
 #include <complex.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <unistd.h>
 
 /* XXX: struct */
 fftw_complex *symbols;
@@ -483,6 +484,7 @@ int main(int argc, char** argv)
 			case SDLK_7: if (new_carrier == -1) break; new_carrier *= 10; new_carrier += 7; break;
 			case SDLK_8: if (new_carrier == -1) break; new_carrier *= 10; new_carrier += 8; break;
 			case SDLK_9: if (new_carrier == -1) break; new_carrier *= 10; new_carrier += 9; break;
+			default: break;
 			}
 			
 			break;
