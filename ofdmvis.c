@@ -33,6 +33,9 @@ static int _continual_pilots_2048[] = {
 	-1,
 };
 
+#define CARRIERS 1705
+static float _eq_iir_coeff = 0.1;
+
 static char _prbs[8192];
 
 /* Convert a normal carrier number (by the specification) into am offset
@@ -77,6 +80,11 @@ typedef struct ofdm_state {
 	SDL_Surface *fft_surf;
 	
 	SDL_Surface *master;
+	
+	/* EQ */
+	double eq_phase[CARRIERS];
+	double eq_ampl[CARRIERS];
+	SDL_Surface *eq_surf;
 } ofdm_state_t;
 
 /* Initialization bits */
@@ -280,7 +288,6 @@ void ofdm_fft_debug(ofdm_state_t *ofdm, fftw_complex *carriers)
 {
 	SDL_Rect r;
 	double re, im;
-	double complex p1, p2;
 	
 	if (!ofdm->fft_surf)
 	{
@@ -293,19 +300,31 @@ void ofdm_fft_debug(ofdm_state_t *ofdm, fftw_complex *carriers)
 	
 	ofdm->fft_symcount++;
 	
+#ifdef MATCH_PHASE_TO_CHAR_0
+	double complex p1, p2;
+
 	/* HACK HACK: match phase to carrier 0 */
 	p1 = carriers[CARRIER(ofdm, 0)][0] +
-	    carriers[CARRIER(ofdm, 0)][1]*1i;
+	     carriers[CARRIER(ofdm, 0)][1]*1i;
 	p2 = carriers[CARRIER(ofdm, ofdm->fft_dbg_carrier)][0] +
-	    carriers[CARRIER(ofdm, ofdm->fft_dbg_carrier)][1]*1i;
+	     carriers[CARRIER(ofdm, ofdm->fft_dbg_carrier)][1]*1i;
 	p2 *= cexp(-carg(p1)*1i);
-	    
+
 	re = creal(p2);
 	im = cimag(p2);
-	
-	
-	re *= 10.0;
-	im *= 10.0;
+#else
+        double complex p;
+        p = carriers[CARRIER(ofdm, ofdm->fft_dbg_carrier)][0] +
+            carriers[CARRIER(ofdm, ofdm->fft_dbg_carrier)][1]*1i;
+        p *= cexp(-ofdm->eq_phase[ofdm->fft_dbg_carrier]*1i);
+        p /= ofdm->eq_ampl[ofdm->fft_dbg_carrier];
+        
+        re = creal(p);
+        im = cimag(p);
+#endif
+
+	re *= 0.5;
+	im *= 0.5;
 	
 	if (re < -1.0) re = -1.0;
 	if (re > 1.0)  re = 1.0;
@@ -320,6 +339,95 @@ void ofdm_fft_debug(ofdm_state_t *ofdm, fftw_complex *carriers)
 	r.w = r.h = 2;
 	
 	SDL_FillRect(ofdm->fft_surf, &r, hsvtorgb(h, 1.0, 1.0));
+}
+
+void ofdm_eq(ofdm_state_t *ofdm)
+{
+	/* Take a list of pilots, then compute an estimated phase and
+	 * amplitude for each carrier by linear interpolation between
+	 * pilots, and then IIR filter that.  */
+	
+	double phase[CARRIERS];
+	double ampl[CARRIERS];
+	
+	int i;
+	for (i = 0; _continual_pilots_2048[i+1] != -1; i++) {
+		int c0 = _continual_pilots_2048[i];
+		int c1 = _continual_pilots_2048[i+1];
+		
+		double complex p0, p1;
+		
+		p0 = ofdm->fft_out[CARRIER(ofdm, c0)][0] +
+		     ofdm->fft_out[CARRIER(ofdm, c0)][1]*1i;
+		p1 = ofdm->fft_out[CARRIER(ofdm, c1)][0] +
+		     ofdm->fft_out[CARRIER(ofdm, c1)][1]*1i;
+		
+		double ph0 = carg(p0);
+		double ph1 = carg(p1);
+		double a0 = cabs(p0);
+		double a1 = cabs(p1);
+		
+		/* Add PRBS phase coefficients. */
+		if (_prbs[c0])
+		        ph0 += M_PI;
+                if (_prbs[c1])
+		        ph1 += M_PI;
+                if (ph0 > M_PI)
+                        ph0 -= M_PI * 2.0;
+                if (ph1 > M_PI)
+                        ph1 -= M_PI * 2.0;
+		
+		/* Set up phase such that it's something we can linearly interpolate between. */
+		if ((ph0 - ph1) > M_PI)
+			ph1 += 2.0*M_PI;
+		else if ((ph1 - ph0) > M_PI)
+			ph0 += 2.0*M_PI;
+		
+		/* Normalize to 4/3 pilot size. */
+		a0 *= 3.0 / 4.0;
+		a1 *= 3.0 / 4.0;
+		
+		/* XXX do no IIR */
+		for (int c = c0; c <= c1; c++) {
+		        double k = (double)(c - c0) / (double)(c1 - c0);
+		        
+		        ofdm->eq_ampl[c] = a1 * k + a0 * (1.0 - k);
+		        double ph = ph1 * k + ph0 * (1.0 - k);
+		        /* Normalize phase back away. */
+		        if (ph > M_PI)
+		                ph -= M_PI * 2.0;
+                        if (ph < -M_PI)
+                                ph += M_PI * 2.0;
+                        ofdm->eq_phase[c] = ph;
+		}
+	}
+}
+	
+void ofdm_eq_debug(ofdm_state_t *ofdm)
+{
+	SDL_Rect r;
+	double re, im;
+	double complex p1, p2;
+	
+	if (!ofdm->eq_surf)
+	{
+		ofdm->eq_surf = SDL_CreateRGBSurface(SDL_SWSURFACE, CONST_XRES, CONST_YRES, 24, 0, 0, 0, 0);
+		r.x = r.y = 0;
+		r.w = CONST_XRES;
+		r.h = CONST_YRES;
+		SDL_FillRect(ofdm->eq_surf, &r, 0);
+	}
+	
+	int i;
+	float h = (float)ofdm->fft_symcount / 150.0;
+	h -= floor(h);
+	for (i = 0; i < CARRIERS; i++) {
+		r.x = i * CONST_XRES / CARRIERS;
+		r.y = CONST_YRES/2 + ofdm->eq_phase[i] / M_PI * (CONST_YRES/2);
+		r.w = r.h = 1;
+	
+		SDL_FillRect(ofdm->eq_surf, &r, hsvtorgb(h, 1.0, 1.0));
+	}
 }
 
 void ofdm_fft_symbol(ofdm_state_t *ofdm)
@@ -340,12 +448,15 @@ void ofdm_fft_symbol(ofdm_state_t *ofdm)
 	
 	/* Debug tap in the pipeline. */
 	ofdm_fft_debug(ofdm, ofdm->fft_out);
+	
+	ofdm_eq(ofdm);
+	ofdm_eq_debug(ofdm);
 }
 
 /* Rendering bits */
 
 #define XRES CONST_XRES
-#define YRES CONST_YRES
+#define YRES (CONST_YRES*2)
 
 void ofdm_render(ofdm_state_t *ofdm, SDL_Surface *master, int x, int y)
 {
@@ -369,11 +480,21 @@ void ofdm_render(ofdm_state_t *ofdm, SDL_Surface *master, int x, int y)
 		dst.w = CONST_XRES;
 		SDL_FillRect(master, &dst, 0xFFFFFFFF);
 	}
+	
+	if (ofdm->eq_surf)
+	{
+		dst.x = x;
+		dst.y = y+CONST_YRES;
+		dst.w = CONST_XRES;
+		dst.h = CONST_YRES;
+		SDL_BlitSurface(ofdm->eq_surf, NULL, master, &dst);
+	}
 }
 
 void ofdm_clear(ofdm_state_t *ofdm)
 {
 	SDL_FillRect(ofdm->fft_surf, NULL, 0x0);
+	SDL_FillRect(ofdm->eq_surf, NULL, 0x0);
 }
 
 /* Main SDL goop */
