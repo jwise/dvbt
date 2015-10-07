@@ -117,25 +117,13 @@ int ofdm_load(struct ofdm_state *ofdm, char *filename)
 	if (fd < 0)
 		return -1;
 	
-	allocsize = 0;
-	do {
-		if (ofdm->nsamples == allocsize)
-		{
-			allocsize += 2048;
-			ofdm->samples = realloc(ofdm->samples, allocsize * sizeof(double));
-			if (!ofdm->samples)
-			{
-				ofdm->nsamples = 0;
-				close(fd);
-				return -1;
-			}
-		}
-		rv = read(fd, ofdm->samples + ofdm->nsamples, (allocsize - ofdm->nsamples) * sizeof(double));
-		if (rv > 0)
-			ofdm->nsamples += (rv / sizeof(double));
-	} while (rv > 0);
-	
-	ofdm->nsamples /= 2;
+	off_t len = lseek(fd, 0, SEEK_END);
+	lseek(fd, 0, SEEK_SET);
+
+	ofdm->samples = realloc(ofdm->samples, len);
+	read(fd, ofdm->samples, len);
+
+	ofdm->nsamples = len / sizeof(double) / 2;
 	
 	close(fd);
 	
