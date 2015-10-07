@@ -301,14 +301,14 @@ void ofdm_fft_debug(ofdm_state_t *ofdm, fftw_complex *carriers)
 	re = creal(p2);
 	im = cimag(p2);
 #else
-        double complex p;
-        p = carriers[CARRIER(ofdm, ofdm->fft_dbg_carrier)][0] +
-            carriers[CARRIER(ofdm, ofdm->fft_dbg_carrier)][1]*1i;
-        p *= cexp(-ofdm->eq_phase[ofdm->fft_dbg_carrier]*1i);
-        p /= ofdm->eq_ampl[ofdm->fft_dbg_carrier];
-        
-        re = creal(p);
-        im = cimag(p);
+	double complex p;
+	p = carriers[CARRIER(ofdm, ofdm->fft_dbg_carrier)][0] +
+	    carriers[CARRIER(ofdm, ofdm->fft_dbg_carrier)][1]*1i;
+	p *= cexp(-ofdm->eq_phase[ofdm->fft_dbg_carrier]*1i);
+	p /= ofdm->eq_ampl[ofdm->fft_dbg_carrier];
+	
+	re = creal(p);
+	im = cimag(p);
 #endif
 
 	re *= 0.5;
@@ -357,13 +357,13 @@ void ofdm_eq(ofdm_state_t *ofdm)
 		
 		/* Add PRBS phase coefficients. */
 		if (_prbs[c0])
-		        ph0 += M_PI;
-                if (_prbs[c1])
-		        ph1 += M_PI;
-                if (ph0 > M_PI)
-                        ph0 -= M_PI * 2.0;
-                if (ph1 > M_PI)
-                        ph1 -= M_PI * 2.0;
+			ph0 += M_PI;
+		if (_prbs[c1])
+			ph1 += M_PI;
+		if (ph0 > M_PI)
+			ph0 -= M_PI * 2.0;
+		if (ph1 > M_PI)
+			ph1 -= M_PI * 2.0;
 		
 		/* Set up phase such that it's something we can linearly interpolate between. */
 		if ((ph0 - ph1) > M_PI)
@@ -377,16 +377,16 @@ void ofdm_eq(ofdm_state_t *ofdm)
 		
 		/* XXX do no IIR */
 		for (int c = c0; c <= c1; c++) {
-		        double k = (double)(c - c0) / (double)(c1 - c0);
-		        
-		        ofdm->eq_ampl[c] = a1 * k + a0 * (1.0 - k);
-		        double ph = ph1 * k + ph0 * (1.0 - k);
-		        /* Normalize phase back away. */
-		        if (ph > M_PI)
-		                ph -= M_PI * 2.0;
-                        if (ph < -M_PI)
-                                ph += M_PI * 2.0;
-                        ofdm->eq_phase[c] = ph;
+			double k = (double)(c - c0) / (double)(c1 - c0);
+			
+			ofdm->eq_ampl[c] = a1 * k + a0 * (1.0 - k);
+			double ph = ph1 * k + ph0 * (1.0 - k);
+			/* Normalize phase back away. */
+			if (ph > M_PI)
+				ph -= M_PI * 2.0;
+			if (ph < -M_PI)
+				ph += M_PI * 2.0;
+			ofdm->eq_phase[c] = ph;
 		}
 	}
 }
