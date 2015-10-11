@@ -9,27 +9,28 @@
 #define MAX_CARRIERS 1705
 #define MAX_TPS_CARRIERS 18
 
-
 /* Convert a normal carrier number (by the specification) into am offset
  * into the FFT results.
  */
 #define CARRIER(ofdm, c) (({ \
-	int _____carrier = (c) + (ofdm)->k_min; \
+	int _____carrier = (c) + (ofdm)->fft->k_min; \
 	if (_____carrier < 0) \
-		_____carrier += (ofdm)->fft_size; \
+		_____carrier += (ofdm)->fft->size; \
 	_____carrier; }))
 
-typedef struct ofdm_state {
-	/* Parameters */
-	int fft_size; /* FFT size */
-	int guard_len; /* guard length */
-	/* Changing either of these parameters requires a cleanup and
-	 * resynchronization.  */
-	 
-	/* Derived details from the FFT size. */
+typedef struct ofdm_params {
+	int size;
 	int *tps_carriers;
 	int *continual_pilots;
 	int k_min;
+} ofdm_params_t;
+
+typedef struct ofdm_state {
+	/* Parameters */
+	ofdm_params_t *fft;
+	int guard_len; /* guard length */
+	/* Changing either of these parameters requires a cleanup and
+	 * resynchronization.  */
 	 
 	double snr;
 	
@@ -67,6 +68,8 @@ typedef struct ofdm_state {
 	uint16_t tps_lastrx; /* for storing synchronization state */
 	double complex tps_last[MAX_TPS_CARRIERS];
 } ofdm_state_t;
+
+extern ofdm_params_t ofdm_params_2048;
 
 extern void ofdm_getsamples(ofdm_state_t *ofdm, int nreq, fftw_complex *out);
 extern void ofdm_estimate_symbol(ofdm_state_t *ofdm);

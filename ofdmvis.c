@@ -12,29 +12,6 @@
 fftw_complex *symbols;
 int nsymbols;
 
-/* TPS carriers are always either:
- *   Re = 1, Im = 0
- * or:
- *   Re = -1, Im = 0
- */
-static int _tps_carriers_2048[] = {
-	34, 50, 209, 346, 413, 569, 595, 688, 790, 901, 1073, 1219, 1262,
-	1286, 1469, 1594, 1687,
-	-1,
-};
-
-/* Continual pilots are always eiter:
- *   Re = 4/3, Im = 0
- * or:
- *   Re = -4/3, Im = 0
- */
-static int _continual_pilots_2048[] = {
-	0, 48, 54, 87, 141, 156, 192, 201, 255, 279, 282, 333, 432, 450,
-	483, 525, 531, 618, 636, 714, 759, 765, 780, 804, 873, 888, 918,
-	939, 1137, 1140, 1146, 1206, 1269, 1323, 1377, 1491, 1683, 1704,
-	-1,
-};
-
 static float _eq_iir_coeff = 0.1;
 
 static char _prbs[8192];
@@ -191,9 +168,9 @@ void ofdm_eq(ofdm_state_t *ofdm)
 	double ampl[MAX_CARRIERS];
 	
 	int i;
-	for (i = 0; _continual_pilots_2048[i+1] != -1; i++) {
-		int c0 = _continual_pilots_2048[i];
-		int c1 = _continual_pilots_2048[i+1];
+	for (i = 0; ofdm->fft->continual_pilots[i+1] != -1; i++) {
+		int c0 = ofdm->fft->continual_pilots[i];
+		int c1 = ofdm->fft->continual_pilots[i+1];
 		
 		double complex p0, p1;
 		
@@ -280,15 +257,15 @@ void ofdm_tps(ofdm_state_t *ofdm)
 	int tvotes;
 	int bit;
 	
-	for (c = 0; _tps_carriers_2048[c] != -1; c++) {
-		cur[c] = ofdm->fft_out[CARRIER(ofdm, _tps_carriers_2048[c])][0] +
-		         ofdm->fft_out[CARRIER(ofdm, _tps_carriers_2048[c])][0]*1i;
+	for (c = 0; ofdm->fft->tps_carriers[c] != -1; c++) {
+		cur[c] = ofdm->fft_out[CARRIER(ofdm, ofdm->fft->tps_carriers[c])][0] +
+		         ofdm->fft_out[CARRIER(ofdm, ofdm->fft->tps_carriers[c])][0]*1i;
 		dot[c] = creal(cur[c]) * creal(ofdm->tps_last[c]) +
 		         cimag(cur[c]) * cimag(ofdm->tps_last[c]);
 		votes[dot[c] < 0]++;
 	}
 	
-	for (c = 0; _tps_carriers_2048[c] != -1; c++)
+	for (c = 0; ofdm->fft->tps_carriers[c] != -1; c++)
 		ofdm->tps_last[c] = cur[c];
 
 	bit = votes[1] > votes[0];
@@ -359,13 +336,13 @@ void ofdm_tps(ofdm_state_t *ofdm)
 void ofdm_fft_symbol(ofdm_state_t *ofdm)
 {
 	if (!ofdm->fft_in)
-		ofdm->fft_in = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * ofdm->fft_size);
+		ofdm->fft_in = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * ofdm->fft->size);
 	assert(ofdm->fft_in);
 	if (!ofdm->fft_out)
-		ofdm->fft_out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * ofdm->fft_size);
+		ofdm->fft_out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * ofdm->fft->size);
 	assert(ofdm->fft_out);
 	if (!ofdm->fft_plan)
-		ofdm->fft_plan = fftw_plan_dft_1d(ofdm->fft_size, ofdm->fft_in, ofdm->fft_out, FFTW_FORWARD, FFTW_MEASURE);
+		ofdm->fft_plan = fftw_plan_dft_1d(ofdm->fft->size, ofdm->fft_in, ofdm->fft_out, FFTW_FORWARD, FFTW_MEASURE);
 	assert(ofdm->fft_plan);
 	
 	ofdm_estimate_symbol(ofdm);
@@ -462,11 +439,9 @@ int main(int argc, char** argv)
 	
 	memset(&ofdm, 0, sizeof(ofdm));
 	
-	ofdm.fft_size = 2048;
-	ofdm.guard_len = ofdm.fft_size / 32;
-	ofdm.k_min = -851;
-	ofdm.tps_carriers = _tps_carriers_2048;
-	ofdm.continual_pilots = _continual_pilots_2048;
+	ofdm.fft = &ofdm_params_2048;
+	ofdm.guard_len = ofdm.fft->size / 32;
+
 	ofdm.fft_dbg_carrier = 1491;
 	ofdm.snr = 100.0; /* 20dB */
 	

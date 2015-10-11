@@ -3,7 +3,7 @@
 
 void ofdm_estimate_symbol(ofdm_state_t *ofdm)
 {
-	int N = ofdm->fft_size;
+	int N = ofdm->fft->size;
 	int L = ofdm->guard_len;
 	double rho = ofdm->snr / (ofdm->snr + 1.0);
 	fftw_complex *sym = ofdm->fft_in;
