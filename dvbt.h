@@ -1,0 +1,74 @@
+#ifndef _DVBT_H
+#define _DVBT_H
+
+#include "math.h"
+#include <fftw3.h>
+#include <complex.h>
+#include <SDL/SDL.h>
+
+#define MAX_CARRIERS 1705
+#define MAX_TPS_CARRIERS 18
+
+
+/* Convert a normal carrier number (by the specification) into am offset
+ * into the FFT results.
+ */
+#define CARRIER(ofdm, c) (({ \
+	int _____carrier = (c) + (ofdm)->k_min; \
+	if (_____carrier < 0) \
+		_____carrier += (ofdm)->fft_size; \
+	_____carrier; }))
+
+typedef struct ofdm_state {
+	/* Parameters */
+	int fft_size; /* FFT size */
+	int guard_len; /* guard length */
+	/* Changing either of these parameters requires a cleanup and
+	 * resynchronization.  */
+	 
+	/* Derived details from the FFT size. */
+	int *tps_carriers;
+	int *continual_pilots;
+	int k_min;
+	 
+	double snr;
+	
+	/* Sample receiver */
+	int cursamp;
+	int nsamples;
+	double *samples;
+	
+	/* Estimator */
+	fftw_complex *estim_buf;
+	int estim_refill; /* How many samples we have stored already. */
+	double complex estim_phase;
+	
+	/* FFT */
+	fftw_plan fft_plan;
+	fftw_complex *fft_in;
+	fftw_complex *fft_out;
+	int fft_symcount;
+	int fft_dbg_carrier;
+	SDL_Surface *fft_surf;
+	
+	SDL_Surface *master;
+	
+	/* EQ */
+	double eq_phase[MAX_CARRIERS];
+	double eq_ampl[MAX_CARRIERS];
+	SDL_Surface *eq_surf;
+	
+	/* TPS */
+#define TPS_N_BITS 68
+#define TPS_SYNCBIT 17 /* bit that you carry on after synchronizing */
+#define TPS_SYNC 0x35EE
+	int tps_bit; /* next TPS bit */
+	uint8_t tps_rx[9];
+	uint16_t tps_lastrx; /* for storing synchronization state */
+	double complex tps_last[MAX_TPS_CARRIERS];
+} ofdm_state_t;
+
+extern void ofdm_getsamples(ofdm_state_t *ofdm, int nreq, fftw_complex *out);
+extern void ofdm_estimate_symbol(ofdm_state_t *ofdm);
+
+#endif

@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <unistd.h>
 
+#include "dvbt.h"
+
 /* XXX: struct */
 fftw_complex *symbols;
 int nsymbols;
@@ -15,8 +17,7 @@ int nsymbols;
  * or:
  *   Re = -1, Im = 0
  */
-#define N_TPS_CARRIERS_MAX 18
-static int _tps_carriers_2048[N_TPS_CARRIERS_MAX] = {
+static int _tps_carriers_2048[] = {
 	34, 50, 209, 346, 413, 569, 595, 688, 790, 901, 1073, 1219, 1262,
 	1286, 1469, 1594, 1687,
 	-1,
@@ -34,71 +35,11 @@ static int _continual_pilots_2048[] = {
 	-1,
 };
 
-#define CARRIERS 1705
 static float _eq_iir_coeff = 0.1;
 
 static char _prbs[8192];
 
-/* Convert a normal carrier number (by the specification) into am offset
- * into the FFT results.
- */
-#define CARRIER(ofdm, c) (({ \
-	int _____carrier = (c) + (ofdm)->k_min; \
-	if (_____carrier < 0) \
-		_____carrier += (ofdm)->fft_size; \
-	_____carrier; }))
-
-typedef struct ofdm_state {
-	/* Parameters */
-	int fft_size; /* FFT size */
-	int guard_len; /* guard length */
-	/* Changing either of these parameters requires a cleanup and
-	 * resynchronization.  */
-	 
-	/* Derived details from the FFT size. */
-	int *tps_carriers;
-	int *continual_pilots;
-	int k_min;
-	 
-	double snr;
-	
-	/* Sample receiver */
-	int cursamp;
-	int nsamples;
-	double *samples;
-	
-	/* Estimator */
-	fftw_complex *estim_buf;
-	int estim_refill; /* How many samples we have stored already. */
-	double complex estim_phase;
-	
-	/* FFT */
-	fftw_plan fft_plan;
-	fftw_complex *fft_in;
-	fftw_complex *fft_out;
-	int fft_symcount;
-	int fft_dbg_carrier;
-	SDL_Surface *fft_surf;
-	
-	SDL_Surface *master;
-	
-	/* EQ */
-	double eq_phase[CARRIERS];
-	double eq_ampl[CARRIERS];
-	SDL_Surface *eq_surf;
-	
-	/* TPS */
-#define TPS_N_BITS 68
-#define TPS_SYNCBIT 17 /* bit that you carry on after synchronizing */
-#define TPS_SYNC 0x35EE
-	int tps_bit; /* next TPS bit */
-	uint8_t tps_rx[9];
-	uint16_t tps_lastrx; /* for storing synchronization state */
-	double complex tps_last[N_TPS_CARRIERS_MAX];
-} ofdm_state_t;
-
 /* Initialization bits */
-
 void ofdm_init_constants()
 {
 	int i;
@@ -150,105 +91,6 @@ void ofdm_getsamples(ofdm_state_t *ofdm, int nreq, fftw_complex *out)
 		ofdm->cursamp = (ofdm->cursamp + 1) % ofdm->nsamples;
 	}
 }
-
-/* Symbol estimation, as per [Beek97]. */
-
-void ofdm_estimate_symbol(ofdm_state_t *ofdm, fftw_complex *sym)
-{
-	int N = ofdm->fft_size;
-	int L = ofdm->guard_len;
-	double rho = ofdm->snr / (ofdm->snr + 1.0);
-
-	if (!ofdm->estim_buf)
-		ofdm->estim_buf = fftw_malloc(sizeof(fftw_complex) * (2*N + L));
-	
-	/* Ideally, we'd like to maintain the buffer looking like this:
-	 *
-	 *   +-------+-----------------------+-------+----------X
-	 *   | G_n-1 |   S Y M B O L   n+0   | G_n+0 |   S Y M B O L  n+1
-	 *   +-------+-----------------------+-------+----------X
-	 *
-	 * The algorithm is most effective at aligning the symbol when the
-	 * symbol is in the middle of the 2N+L block.  So, we'll keep it
-	 * there.  The paper suggests using the time calibration only for
-	 * acquisition; we'll see how the jitter works out here.
-	 *
-	 * We always consume into the output starting from where the
-	 * algorithm recommended.  We then shift back in the buffer starting
-	 * at ofs + N, so that what we currently call G_n+0 will be at the
-	 * beginning of the buffer for next time.
-	 */
-	
-	ofdm_getsamples(ofdm, 2*N + L - ofdm->estim_refill, ofdm->estim_buf + ofdm->estim_refill);
-
-	/* Prime the running sums. */
-	double complex gam = 0, Phi = 0;
-	int k;
-#define C(p) (ofdm->estim_buf[p][0] + ofdm->estim_buf[p][1] * 1.0i)
-#define GAM(n) C(n) * conj(C(n+N))
-#define PHI(n) 0.5 * (pow(cabs(C(n)), 2.0) + pow(cabs(C(n+N)), 2.0))
-	for (k = 0; k < L; k++)
-	{
-		gam += GAM(k);
-		Phi += PHI(k);
-	}
-	
-	/* argmax(0 >= i > 2N, cabs(Gam(i)) - rho * Phi(i)) */
-	double max = -INFINITY;
-	double complex bestgam = 1.0;
-	int argmax = 0;
-	for (k = 0; k < N+L; k++)
-	{
-		double n = cabs(gam) - rho * Phi;
-		if (n > max)
-		{
-			max = n;
-			bestgam = gam;
-			argmax = k;
-		}
-		
-		gam -= GAM(k);
-		Phi -= PHI(k);
-		if (k != (2*N-1))
-		{
-			gam += GAM(k+L);
-			Phi += PHI(k+L);
-		}
-	}
-	
-	/* Avoid excessive phase jitter by quantizing argmax if it's "almost right" --
-	 * a poor man's way of "leaving acquisition mode". */
-	if (argmax >= (L - 2) && argmax < 3 * L / 2)
-		argmax = L;
-	else
-		printf("estimator is feeling a little nervous about argmax %d...\n", argmax);
-
-	double epsilon = (-1.0 / (2.0 * M_PI)) * carg(bestgam);
-	
-	for (k = 0; k < N; k++)
-	{
-		double complex c;
-		
-		c = C(k + L + argmax);
-		
-		/* Science fact: the correct value for epsilon in Fabrice's
-		 * input set is .01, pretty much exactly.  WTF?
-		 */
-		
-		ofdm->estim_phase += 2.0i * M_PI * ((epsilon + .05 /* ??? */) / (double)N);
-		c *= cexp(ofdm->estim_phase);
-		
-		sym[k][0] = creal(c);
-		sym[k][1] = cimag(c);
-	}
-	
-	ofdm->estim_refill = 2*N + L - (argmax + N);
-	memmove(ofdm->estim_buf, ofdm->estim_buf + argmax + N, sizeof(fftw_complex) * ofdm->estim_refill);
-
-#undef GAM
-#undef PHI
-#undef C	
-}	
 
 uint32_t hsvtorgb(float H, float S, float V)
 {
@@ -345,8 +187,8 @@ void ofdm_eq(ofdm_state_t *ofdm)
 	 * amplitude for each carrier by linear interpolation between
 	 * pilots, and then IIR filter that.  */
 	
-	double phase[CARRIERS];
-	double ampl[CARRIERS];
+	double phase[MAX_CARRIERS];
+	double ampl[MAX_CARRIERS];
 	
 	int i;
 	for (i = 0; _continual_pilots_2048[i+1] != -1; i++) {
@@ -419,8 +261,8 @@ void ofdm_eq_debug(ofdm_state_t *ofdm)
 	int i;
 	float h = (float)ofdm->fft_symcount / 150.0;
 	h -= floor(h);
-	for (i = 0; i < CARRIERS; i++) {
-		r.x = i * CONST_XRES / CARRIERS;
+	for (i = 0; i < MAX_CARRIERS; i++) {
+		r.x = i * CONST_XRES / MAX_CARRIERS;
 		r.y = CONST_YRES/2 + ofdm->eq_phase[i] / M_PI * (CONST_YRES/2);
 		r.w = r.h = 1;
 	
@@ -432,8 +274,8 @@ void ofdm_eq_debug(ofdm_state_t *ofdm)
 void ofdm_tps(ofdm_state_t *ofdm)
 {
 	int c;
-	double complex cur[N_TPS_CARRIERS_MAX];
-	double dot[N_TPS_CARRIERS_MAX];
+	double complex cur[MAX_TPS_CARRIERS];
+	double dot[MAX_TPS_CARRIERS];
 	int votes[2] = {0,0};
 	int tvotes;
 	int bit;
@@ -486,7 +328,7 @@ void ofdm_tps(ofdm_state_t *ofdm)
 	(x == 4) ? "code rate 7/8" : \
 	           "illegal code rate"
 
-		printf("TPS receiver has received TPS frame: frame %d, %s, %s, %s%s%s%s, guard interval %s, mode %s\n",
+		printf("TPS receiver has received TPS frame: frame %d, %s, %s, %s%s%s%s, guard interval %s, %s\n",
 			frame,
 			constellation == 0 ? "QPSK" :
 			constellation == 1 ? "QAM16" :
@@ -526,11 +368,10 @@ void ofdm_fft_symbol(ofdm_state_t *ofdm)
 		ofdm->fft_plan = fftw_plan_dft_1d(ofdm->fft_size, ofdm->fft_in, ofdm->fft_out, FFTW_FORWARD, FFTW_MEASURE);
 	assert(ofdm->fft_plan);
 	
-	ofdm_estimate_symbol(ofdm, ofdm->fft_in);
+	ofdm_estimate_symbol(ofdm);
 	
 	fftw_execute(ofdm->fft_plan);
 	
-	/* Debug tap in the pipeline. */
 	ofdm_fft_debug(ofdm, ofdm->fft_out);
 	
 	ofdm_tps(ofdm);
