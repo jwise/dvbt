@@ -70,8 +70,11 @@ void ofdm_estimate_symbol(ofdm_state_t *ofdm)
 	static int acq = 0;
 	if (argmax >= (L - 2) && argmax < 3 * L / 2)
 		argmax = L;
-	else
+	else {
+		if (argmax > (N - L))
+			argmax -= N;
 		printf("estimator is feeling a little nervous about argmax %d...\n", argmax);
+	}
 
 	double epsilon = (-1.0 / (2.0 * M_PI)) * carg(bestgam);
 	
