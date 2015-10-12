@@ -69,9 +69,19 @@ typedef struct ofdm_state {
 	double complex tps_last[MAX_TPS_CARRIERS];
 } ofdm_state_t;
 
+#define DEBUG_XRES 240
+#define DEBUG_YRES 240
+
+extern uint32_t hsvtorgb(float H, float S, float V);
+
 extern ofdm_params_t ofdm_params_2048;
+extern char dvbt_prbs[8192];
+extern void ofdm_init_constants();
 
 extern void ofdm_getsamples(ofdm_state_t *ofdm, int nreq, fftw_complex *out);
 extern void ofdm_estimate_symbol(ofdm_state_t *ofdm);
+
+extern void ofdm_eq(ofdm_state_t *ofdm);
+extern void ofdm_eq_debug(ofdm_state_t *ofdm);
 
 #endif

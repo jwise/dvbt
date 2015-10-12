@@ -12,27 +12,6 @@
 fftw_complex *symbols;
 int nsymbols;
 
-static float _eq_iir_coeff = 0.1;
-
-static char _prbs[8192];
-
-/* Initialization bits */
-void ofdm_init_constants()
-{
-	int i;
-
-	/* Generate the 11-bit PRBS. */
-	int generator = 0x7FF;
-	for (i = 0; i < sizeof(_prbs) / sizeof(_prbs[0]); i++)
-	{
-		_prbs[i] = generator & 1;
-		generator =
-			(generator >> 1) |
-			(((generator & 1) ? 0x400 : 0) ^
-			 ((generator & 4) ? 0x400 : 0));
-	}
-}
-
 int ofdm_load(struct ofdm_state *ofdm, char *filename)
 {
 	int allocsize;
@@ -98,9 +77,6 @@ uint32_t hsvtorgb(float H, float S, float V)
 	return ri + (gi << 8) + (bi << 16);
 }
 
-#define CONST_XRES 240
-#define CONST_YRES 240
-
 void ofdm_fft_debug(ofdm_state_t *ofdm, fftw_complex *carriers)
 {
 	SDL_Rect r;
@@ -108,10 +84,10 @@ void ofdm_fft_debug(ofdm_state_t *ofdm, fftw_complex *carriers)
 	
 	if (!ofdm->fft_surf)
 	{
-		ofdm->fft_surf = SDL_CreateRGBSurface(SDL_SWSURFACE, CONST_XRES, CONST_YRES, 24, 0, 0, 0, 0);
+		ofdm->fft_surf = SDL_CreateRGBSurface(SDL_SWSURFACE, DEBUG_XRES, DEBUG_YRES, 24, 0, 0, 0, 0);
 		r.x = r.y = 0;
-		r.w = CONST_XRES;
-		r.h = CONST_YRES;
+		r.w = DEBUG_XRES;
+		r.h = DEBUG_YRES;
 		SDL_FillRect(ofdm->fft_surf, &r, 0);
 	}
 	
@@ -151,100 +127,11 @@ void ofdm_fft_debug(ofdm_state_t *ofdm, fftw_complex *carriers)
 	
 	float h = (float)ofdm->fft_symcount / 150.0;
 	h -= floor(h);
-	r.x = CONST_XRES/2 + re * CONST_XRES/2;
-	r.y = CONST_YRES/2 + im * CONST_YRES/2;
+	r.x = DEBUG_XRES/2 + re * DEBUG_XRES/2;
+	r.y = DEBUG_YRES/2 + im * DEBUG_YRES/2;
 	r.w = r.h = 2;
 	
 	SDL_FillRect(ofdm->fft_surf, &r, hsvtorgb(h, 1.0, 1.0));
-}
-
-void ofdm_eq(ofdm_state_t *ofdm)
-{
-	/* Take a list of pilots, then compute an estimated phase and
-	 * amplitude for each carrier by linear interpolation between
-	 * pilots, and then IIR filter that.  */
-	
-	double phase[MAX_CARRIERS];
-	double ampl[MAX_CARRIERS];
-	
-	int i;
-	for (i = 0; ofdm->fft->continual_pilots[i+1] != -1; i++) {
-		int c0 = ofdm->fft->continual_pilots[i];
-		int c1 = ofdm->fft->continual_pilots[i+1];
-		
-		double complex p0, p1;
-		
-		p0 = ofdm->fft_out[CARRIER(ofdm, c0)][0] +
-		     ofdm->fft_out[CARRIER(ofdm, c0)][1]*1i;
-		p1 = ofdm->fft_out[CARRIER(ofdm, c1)][0] +
-		     ofdm->fft_out[CARRIER(ofdm, c1)][1]*1i;
-		
-		double ph0 = carg(p0);
-		double ph1 = carg(p1);
-		double a0 = cabs(p0);
-		double a1 = cabs(p1);
-		
-		/* Add PRBS phase coefficients. */
-		if (_prbs[c0])
-			ph0 += M_PI;
-		if (_prbs[c1])
-			ph1 += M_PI;
-		if (ph0 > M_PI)
-			ph0 -= M_PI * 2.0;
-		if (ph1 > M_PI)
-			ph1 -= M_PI * 2.0;
-		
-		/* Set up phase such that it's something we can linearly interpolate between. */
-		if ((ph0 - ph1) > M_PI)
-			ph1 += 2.0*M_PI;
-		else if ((ph1 - ph0) > M_PI)
-			ph0 += 2.0*M_PI;
-		
-		/* Normalize to 4/3 pilot size. */
-		a0 *= 3.0 / 4.0;
-		a1 *= 3.0 / 4.0;
-		
-		/* XXX do no IIR */
-		for (int c = c0; c <= c1; c++) {
-			double k = (double)(c - c0) / (double)(c1 - c0);
-			
-			ofdm->eq_ampl[c] = a1 * k + a0 * (1.0 - k);
-			double ph = ph1 * k + ph0 * (1.0 - k);
-			/* Normalize phase back away. */
-			if (ph > M_PI)
-				ph -= M_PI * 2.0;
-			if (ph < -M_PI)
-				ph += M_PI * 2.0;
-			ofdm->eq_phase[c] = ph;
-		}
-	}
-}
-	
-void ofdm_eq_debug(ofdm_state_t *ofdm)
-{
-	SDL_Rect r;
-	double re, im;
-	double complex p1, p2;
-	
-	if (!ofdm->eq_surf)
-	{
-		ofdm->eq_surf = SDL_CreateRGBSurface(SDL_SWSURFACE, CONST_XRES, CONST_YRES, 24, 0, 0, 0, 0);
-		r.x = r.y = 0;
-		r.w = CONST_XRES;
-		r.h = CONST_YRES;
-		SDL_FillRect(ofdm->eq_surf, &r, 0);
-	}
-	
-	int i;
-	float h = (float)ofdm->fft_symcount / 150.0;
-	h -= floor(h);
-	for (i = 0; i < MAX_CARRIERS; i++) {
-		r.x = i * CONST_XRES / MAX_CARRIERS;
-		r.y = CONST_YRES/2 + ofdm->eq_phase[i] / M_PI * (CONST_YRES/2);
-		r.w = r.h = 1;
-	
-		SDL_FillRect(ofdm->eq_surf, &r, hsvtorgb(h, 1.0, 1.0));
-	}
 }
 
 /* TPS acquisition takes place on non-equalized carriers, since DBPSK! */
@@ -359,8 +246,8 @@ void ofdm_fft_symbol(ofdm_state_t *ofdm)
 
 /* Rendering bits */
 
-#define XRES CONST_XRES
-#define YRES (CONST_YRES*2)
+#define XRES DEBUG_XRES
+#define YRES (DEBUG_YRES*2)
 
 void ofdm_render(ofdm_state_t *ofdm, SDL_Surface *master, int x, int y)
 {
@@ -370,27 +257,27 @@ void ofdm_render(ofdm_state_t *ofdm, SDL_Surface *master, int x, int y)
 	{
 		dst.x = x;
 		dst.y = y;
-		dst.w = CONST_XRES;
-		dst.h = CONST_YRES;
+		dst.w = DEBUG_XRES;
+		dst.h = DEBUG_YRES;
 		SDL_BlitSurface(ofdm->fft_surf, NULL, master, &dst);
-		dst.x = x + CONST_XRES / 2;
+		dst.x = x + DEBUG_XRES / 2;
 		dst.y = y;
 		dst.w = 1;
-		dst.h = CONST_YRES;
+		dst.h = DEBUG_YRES;
 		SDL_FillRect(master, &dst, 0xFFFFFFFF);
-		dst.y = y + CONST_YRES / 2;
+		dst.y = y + DEBUG_YRES / 2;
 		dst.x = x;
 		dst.h = 1;
-		dst.w = CONST_XRES;
+		dst.w = DEBUG_XRES;
 		SDL_FillRect(master, &dst, 0xFFFFFFFF);
 	}
 	
 	if (ofdm->eq_surf)
 	{
 		dst.x = x;
-		dst.y = y+CONST_YRES;
-		dst.w = CONST_XRES;
-		dst.h = CONST_YRES;
+		dst.y = y+DEBUG_YRES;
+		dst.w = DEBUG_XRES;
+		dst.h = DEBUG_YRES;
 		SDL_BlitSurface(ofdm->eq_surf, NULL, master, &dst);
 	}
 }

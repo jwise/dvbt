@@ -12,8 +12,8 @@ downmix: downmix.c multirate_algs/decim.c multirate_algs/resamp.c downmix-coef1.
 dvbt.raw: dvbt.pgm pgmtoraw
 	./pgmtoraw < dvbt.pgm > dvbt.raw
 
-ofdmvis: ofdmvis.c dvbt.h dvbt_align.c dvbt_params.c
-	gcc -o ofdmvis `sdl-config --libs --cflags` ofdmvis.c dvbt_align.c dvbt_params.c -lfftw3
+ofdmvis: ofdmvis.c dvbt.h dvbt_align.c dvbt_eq.c dvbt_params.c
+	gcc -o ofdmvis `sdl-config --libs --cflags` ofdmvis.c dvbt_align.c dvbt_eq.c dvbt_params.c -lfftw3
 
 ml-estimation: ml-estimation.c
 	gcc -o ml-estimation ml-estimation.c -O3

@@ -1,5 +1,7 @@
 #include "dvbt.h"
 
+char dvbt_prbs[8192];
+
 /* TPS carriers are always either:
  *   Re = 1, Im = 0
  * or:
@@ -29,3 +31,20 @@ ofdm_params_t ofdm_params_2048 = {
         .continual_pilots = _continual_pilots_2048,
         .k_min = -851
 };
+
+/* Initialization bits */
+void ofdm_init_constants()
+{
+	int i;
+
+	/* Generate the 11-bit PRBS. */
+	int generator = 0x7FF;
+	for (i = 0; i < sizeof(dvbt_prbs) / sizeof(dvbt_prbs[0]); i++)
+	{
+		dvbt_prbs[i] = generator & 1;
+		generator =
+			(generator >> 1) |
+			(((generator & 1) ? 0x400 : 0) ^
+			 ((generator & 4) ? 0x400 : 0));
+	}
+}
