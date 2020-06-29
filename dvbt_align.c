@@ -65,15 +65,31 @@ void ofdm_estimate_symbol(ofdm_state_t *ofdm)
 		}
 	}
 	
-	/* Avoid excessive phase jitter by quantizing argmax if it's "almost right" --
-	 * a poor man's way of "leaving acquisition mode". */
-	static int acq = 0;
-	if (argmax >= (L - 2) && argmax < 3 * L / 2)
+#define CONFIDENCE_K_IIR 0.05
+#define CONFIDENCE_WIDTH 15
+
+	double confidence = 1.0 - abs(argmax - L) / (double)CONFIDENCE_WIDTH;
+	if (confidence < 0.0)
+		confidence = 0.0;
+	ofdm->estim_confidence = ofdm->estim_confidence * (1.0 - CONFIDENCE_K_IIR) + confidence * CONFIDENCE_K_IIR;
+	
+	/* If we are feeling confident (have "left acquisition mode"), avoid
+	 * excessive phase jitter by quantizing argmax.  */
+	int confident = (ofdm->estim_confidence) > 0.60;
+	
+	// printf("estimator has argmax %d (L=%d), confidence %lf avg confidence %lf\n", argmax, L, confidence, ofdm->estim_confidence);
+	if (confident && argmax >= (L - 2) && argmax < (L + 2))
 		argmax = L;
 	else {
 		if (argmax > (N - L))
 			argmax -= N;
-		printf("estimator is feeling a little nervous about argmax %d...\n", argmax);
+		/* Avoid eating up a whole bunch of samples because of a
+		 * noise burst while we're in acquisition mode.  */
+		if (confident && argmax < (L - CONFIDENCE_WIDTH))
+			argmax = L - CONFIDENCE_WIDTH;
+		if (confident && argmax > (L + CONFIDENCE_WIDTH))
+			argmax = L + CONFIDENCE_WIDTH;
+		printf("estimator is feeling a little nervous, new argmax is %d...\n", argmax);
 	}
 
 	double epsilon = (-1.0 / (2.0 * M_PI)) * carg(bestgam);

@@ -40,6 +40,7 @@ typedef struct ofdm_state {
 	double *samples;
 	
 	/* Estimator */
+	double estim_confidence; /* How good the estimator is feeling. */
 	fftw_complex *estim_buf;
 	int estim_refill; /* How many samples we have stored already. */
 	double complex estim_phase;
