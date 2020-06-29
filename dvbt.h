@@ -67,6 +67,11 @@ typedef struct ofdm_state {
 	uint8_t tps_rx[9];
 	uint16_t tps_lastrx; /* for storing synchronization state */
 	double complex tps_last[MAX_TPS_CARRIERS];
+	
+	/* Current receiver status otherwise */
+	int synchronized;
+	int frame; /* 0 - 4 */
+	int symbol; /* 0 - 67 */
 } ofdm_state_t;
 
 #define DEBUG_XRES 240
@@ -83,5 +88,7 @@ extern void ofdm_estimate_symbol(ofdm_state_t *ofdm);
 
 extern void ofdm_eq(ofdm_state_t *ofdm);
 extern void ofdm_eq_debug(ofdm_state_t *ofdm);
+
+extern void ofdm_tps(ofdm_state_t *ofdm);
 
 #endif
