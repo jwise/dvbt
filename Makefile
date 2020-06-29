@@ -16,7 +16,7 @@ dvbt.raw: dvbt.pgm pgmtoraw
 	./pgmtoraw < dvbt.pgm > dvbt.raw
 
 ofdmvis: $(SRCS) $(HDRS)
-	gcc -o ofdmvis `sdl-config --libs --cflags` $(SRCS) -lfftw3
+	gcc -o ofdmvis `sdl2-config --libs --cflags` $(SRCS) -lfftw3 -lSDL2main
 
 ml-estimation: ml-estimation.c
 	gcc -o ml-estimation ml-estimation.c -O3

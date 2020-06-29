@@ -4,7 +4,7 @@
 #include "math.h"
 #include <fftw3.h>
 #include <complex.h>
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 #define MAX_CARRIERS 1705
 #define MAX_TPS_CARRIERS 18

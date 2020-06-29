@@ -1,4 +1,4 @@
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 #include "math.h"
 #include <fftw3.h>
 #include <complex.h>
@@ -205,6 +205,7 @@ void ofdm_clear(ofdm_state_t *ofdm)
 /* Main SDL goop */
 
 static ofdm_state_t ofdm = {0};
+static SDL_Window *window;
 static SDL_Surface *master;
 
 static void update()
@@ -215,13 +216,13 @@ static void update()
 	if (SDL_GetTicks() > (last + 100))
 	{
 		ofdm_render(&ofdm, master, 0, 0);
-		SDL_Flip(master);
+		SDL_UpdateWindowSurface(window);
 		
 		last = SDL_GetTicks();
 	}
 }
 
-static Uint32 tick(Uint32 interval)
+static Uint32 tick(Uint32 interval, void *p)
 {
 	SDL_Event ev;
 	
@@ -253,7 +254,14 @@ int main(int argc, char** argv)
 	}
 	atexit(SDL_Quit);
 	
-	master = SDL_SetVideoMode(XRES, YRES, 24, SDL_SWSURFACE);
+	window = SDL_CreateWindow("OFDM Visualizer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, XRES, YRES, 0);
+	if (!window)
+	{
+		printf("SDL video init failed: %s\n", SDL_GetError());
+		exit(1);
+	}
+	
+	master = SDL_GetWindowSurface(window);
 	if (!master)
 	{
 		printf("SDL video init failed: %s\n", SDL_GetError());
@@ -266,9 +274,7 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 	
-	SDL_WM_SetCaption("OFDM Visualizer", "ofdmvis");
-	
-	SDL_SetTimer(10, tick);
+	SDL_AddTimer(10, tick, NULL);
 	
 	while (SDL_WaitEvent(&ev))
 	{
