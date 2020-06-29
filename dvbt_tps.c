@@ -94,6 +94,11 @@ void ofdm_tps(ofdm_state_t *ofdm)
                         printf("0x%x, ", ofdm->tps_rx[i]);
                 printf("0x00}\n");
                 
+                ofdm->tps_synchronized = 1;
+                if (constellation != 1 || hierarchy != 0 || guard != 0 || codehp != 1 || mode != 0) {
+		        printf("*** TPS signal reports unsupported hierarchy ***\n");
+		        ofdm->tps_synchronized = 0;
+                }
 		ofdm->tps_bit = 0;
 	}
 }

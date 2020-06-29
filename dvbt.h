@@ -70,7 +70,7 @@ typedef struct ofdm_state {
 	double complex tps_last[MAX_TPS_CARRIERS];
 	
 	/* Current receiver status otherwise */
-	int synchronized;
+	int tps_synchronized;
 	int frame; /* 0 - 4 */
 	int symbol; /* 0 - 67 */
 } ofdm_state_t;
