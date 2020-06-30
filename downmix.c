@@ -31,7 +31,7 @@ unsigned int inloat(float f)
 double *rebuf, *rebuf2;
 double *imbuf, *imbuf2;
 
-int main()
+int main(int argc, char **argv)
 {
 	int c;
 	double inf, ref, imf;
@@ -46,7 +46,12 @@ int main()
 	rebuf2 = malloc(INPSIZ * sizeof(double));
 	imbuf2 = malloc(INPSIZ * sizeof(double));
 	
-	fp = fopen("dvbt.raw", "rb");
+	if (argc < 3) {
+		printf("usage: %s input output\n", argv[0]);
+		exit(1);
+	}
+	
+	fp = fopen(argv[1], "rb");
 	if (!fp)
 	{
 		printf("couldn't open dvbt.raw\n");
@@ -102,7 +107,7 @@ int main()
 	resamp(8, 17, pass3_ncoefs/8, &c /* phase */, pass3_coefs, delayline, nim, imbuf, imbuf2, &nim);
 
 	printf("Writing output...\n");
-	fp = fopen("dvbt.mixed.raw", "wb");
+	fp = fopen(argv[2], "wb");
 	for (c = 0; c < nre; c++)
 	{
 		fwrite(&rebuf2[c], sizeof(double), 1, fp);

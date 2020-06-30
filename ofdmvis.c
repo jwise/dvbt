@@ -268,7 +268,7 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 	
-	if (ofdm_load(&ofdm, "dvbt.mixed.raw") < 0)
+	if (ofdm_load(&ofdm, (argc > 1) ? argv[1] : "dvbt.mixed.raw") < 0)
 	{
 		printf("failed to load file\n");
 		exit(1);
