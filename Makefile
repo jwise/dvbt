@@ -1,7 +1,7 @@
 LDFLAGS=-lm
 CFLAGS=-O3
 
-SRCS = ofdmvis.c dvbt_align.c dvbt_eq.c dvbt_params.c dvbt_tps.c
+SRCS = ofdmvis.c dvbt_align.c dvbt_eq.c dvbt_params.c dvbt_tps.c dvbt_constel.c
 HDRS = dvbt.h
 
 all: dvbt.mixed.raw pgmtoraw downmix ofdmvis ml-estimation

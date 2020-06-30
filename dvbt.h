@@ -13,7 +13,7 @@
  * into the FFT results.
  */
 #define CARRIER(ofdm, c) (({ \
-	int _____carrier = (c) + (ofdm)->fft->k_min; \
+	int _____carrier = (c) + (ofdm)->fft->k_min_ofs; \
 	if (_____carrier < 0) \
 		_____carrier += (ofdm)->fft->size; \
 	_____carrier; }))
@@ -22,7 +22,8 @@ typedef struct ofdm_params {
 	int size;
 	int *tps_carriers;
 	int *continual_pilots;
-	int k_min;
+	int k_min_ofs;
+	int k_max;
 } ofdm_params_t;
 
 typedef struct ofdm_state {
@@ -91,5 +92,7 @@ extern void ofdm_eq(ofdm_state_t *ofdm);
 extern void ofdm_eq_debug(ofdm_state_t *ofdm);
 
 extern void ofdm_tps(ofdm_state_t *ofdm);
+
+extern void ofdm_constel(ofdm_state_t *ofdm);
 
 #endif

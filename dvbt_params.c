@@ -29,7 +29,8 @@ ofdm_params_t ofdm_params_2048 = {
         .size = 2048,
         .tps_carriers = _tps_carriers_2048,
         .continual_pilots = _continual_pilots_2048,
-        .k_min = -851
+        .k_min_ofs = -851,
+        .k_max = 1704
 };
 
 /* Initialization bits */

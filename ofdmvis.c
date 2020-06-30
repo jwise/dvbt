@@ -156,6 +156,8 @@ void ofdm_fft_symbol(ofdm_state_t *ofdm)
 	
 	ofdm_eq(ofdm);
 	ofdm_eq_debug(ofdm);
+	
+	ofdm_constel(ofdm);
 }
 
 /* Rendering bits */
