@@ -24,7 +24,14 @@ typedef struct ofdm_params {
 	int *continual_pilots;
 	int k_min_ofs;
 	int k_max;
+	int n_max;
 } ofdm_params_t;
+
+enum dvbt_constellation {
+	CONSTEL_QPSK = 0,
+	CONSTEL_QAM16 = 1,
+	CONSTEL_QAM64 = 2
+};
 
 typedef struct ofdm_state {
 	/* Parameters */
@@ -70,10 +77,17 @@ typedef struct ofdm_state {
 	uint16_t tps_lastrx; /* for storing synchronization state */
 	double complex tps_last[MAX_TPS_CARRIERS];
 	
-	/* Current receiver status otherwise */
+	enum dvbt_constellation tps_constellation;
+	int tps_hierarchy;
+
+	/* Current frame-level TPS state output */
 	int tps_synchronized;
 	int frame; /* 0 - 4 */
 	int symbol; /* 0 - 67 */
+	
+	/* Constellation demod and deinterleave */
+	int constel_ready;
+	
 } ofdm_state_t;
 
 #define DEBUG_XRES 240
