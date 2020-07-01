@@ -107,4 +107,14 @@ void ofdm_constel(ofdm_state_t *ofdm)
 	if (yptr != ofdm->fft->n_max) {
 		printf("constel: unpacked wrong number of Ys %d sym %d should be %d, tps_c %d, pilot_c %d\n", yptr, ofdm->symbol, ofdm->fft->n_max, tps_c, pilot_c);
 	}
+	
+	/* section 4.3.4.2: symbol deinterleaver */
+	uint8_t yps[6048];
+	for (c = 0; c <= ofdm->fft->k_max; c++) {
+		if ((ofdm->symbol % 2) == 0) {
+			yps[c] = ys[ofdm->fft->scram_h[c]];
+		} else {
+			yps[ofdm->fft->scram_h[c]] = yps[c];
+		}
+	}
 }

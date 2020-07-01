@@ -25,6 +25,7 @@ typedef struct ofdm_params {
 	int k_min_ofs;
 	int k_max;
 	int n_max;
+	uint16_t *scram_h;
 } ofdm_params_t;
 
 enum dvbt_constellation {

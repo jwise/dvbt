@@ -31,13 +31,16 @@ static int _continual_pilots_2048[] = {
 	-1,
 };
 
+static uint16_t _scram_h_2048[1512];
+
 ofdm_params_t ofdm_params_2048 = {
         .size = 2048,
         .tps_carriers = _tps_carriers_2048,
         .continual_pilots = _continual_pilots_2048,
         .k_min_ofs = -851,
         .k_max = 1704,
-        .n_max = 1512
+        .n_max = 1512,
+        .scram_h = _scram_h_2048
 };
 
 /* Initialization bits */
@@ -54,5 +57,30 @@ void ofdm_init_constants()
 			(generator >> 1) |
 			(((generator & 1) ? 0x400 : 0) ^
 			 ((generator & 4) ? 0x400 : 0));
+	}
+	
+	/* Generate H(q) for the symbol interleaver. */
+	uint16_t Rp;
+	/* R[bitscram[b]] = R'[b] */
+	int bitscram[10] = {4, 3, 9, 6, 2, 8, 1, 5, 7, 0};
+	int q = 0;
+	for (i = 0; i < 2048; i++) {
+		if (i == 0 || i == 1) {
+			Rp = 0;
+		} else if (i == 2) {
+			Rp = 1;
+		} else {
+			Rp = (Rp >> 1) | (((Rp & 1) ^ ((Rp >> 3) & 1)) << 9);
+		}
+		
+		uint16_t R = 0;
+		for (int b = 0; b < 10; b++)
+			R |= ((Rp >> b) & 1) << bitscram[b];
+		
+		uint16_t Hq = ((i & 1) << 10) | R;
+		if (Hq < ofdm_params_2048.n_max) {
+			_scram_h_2048[q] = Hq;
+			q++;
+		}
 	}
 }
