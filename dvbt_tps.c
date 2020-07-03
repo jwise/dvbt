@@ -43,7 +43,7 @@ void ofdm_tps(ofdm_state_t *ofdm)
 	
 	ofdm->symbol = ofdm->tps_bit - 1;
 	
-	if (ofdm->tps_bit == 0)
+	if (ofdm->symbol == 0)
 		ofdm->frame = (ofdm->frame + 1) % 4;
 	
 	if (ofdm->tps_bit == TPS_N_BITS) {
@@ -55,7 +55,7 @@ void ofdm_tps(ofdm_state_t *ofdm)
 		int guard = (ofdm->tps_rx[4] >> 2) & 3;
 		int mode = ofdm->tps_rx[4] & 3;
 		
-		ofdm->frame = (frame + 4 - 1) % 4;
+		ofdm->frame = frame;
 
 #define DECO_CODE(x) \
 	(x == 0) ? "code rate 1/2" : \
