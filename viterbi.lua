@@ -68,14 +68,17 @@ curst = {}
 for sk,_ in pairs(states) do
 	curst[sk] = {}
 	curst[sk].st = sk
-	curst[sk].prev = nil
 	curst[sk].pm = 0
 end
 
 -- Inductive step functiom from n -> n + 1.
 function viterbi(curst, x, y)
 	local newst = {}
-	for sk,_ in pairs(states) do
+	for sk=0,(BLSH(1, 6) - 1) do
+		newst[sk] = { st = 0, prevst = 0, previnp = 0, pm = math.huge }
+	end
+
+	for sk=0,(BLSH(1, 6) - 1) do
 		for inp=0,1 do
 			-- compute a branch metric
 			local bm = 0
@@ -87,11 +90,11 @@ function viterbi(curst, x, y)
 			
 			-- if it's the shortest path metric for the state we land in, update
 			local next = states[sk][inp].next
-			if not newst[next] or newst[next].pm > pm then
-				newst[next] = {}
+			if not newst[sk] or newst[next].pm > pm then
 				newst[next].st = sk
 				newst[next].pm = pm
-				newst[next].prev = { st = curst[sk], inp = inp }
+				newst[next].prevst = curst[sk]
+				newst[next].previnp = inp
 			end
 		end
 	end
@@ -127,10 +130,10 @@ end
 bits = {}
 
 io.stderr:write(string.format("Final path metric was %d.\n", best.pm))
-while best and best.prev do
+while best and best.prevst do
 	-- io.stderr:write(string.format("pm %d, inp %d, st %x\n", best.pm, best.prev.inp, best.st))
-	table.insert(bits, best.prev.inp)
-	best = best.prev.st
+	table.insert(bits, best.previnp)
+	best = best.prevst
 end
 io.stderr:write(string.format("Initial state was %x.\n", best.st))
 
