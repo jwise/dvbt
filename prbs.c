@@ -22,9 +22,10 @@ void main() {
 			continue;
 		init = 1;
 		
-		if (pkt[0] == 0xB8)
+		if (pkt[0] == 0xB8) {
 			lfsr = 0b100101010000000;
-		else
+			pkt[0] = 0x47;
+		} else
 			byte_from(&lfsr);
 			
 		for (int i = 1; i < 188; i++) {
