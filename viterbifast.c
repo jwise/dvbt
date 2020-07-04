@@ -7,7 +7,7 @@
 // fast-ish iterative viterbi decoder for K=5
 
 #define DECISION_LEN 32
-#define OUTPUT_BITS 32
+#define OUTPUT_BITS 256
 #define VITERBI_BUFSZ (DECISION_LEN + OUTPUT_BITS + 8)
 /* n.b.: VITERBI_BUFSZ should be a multiple of 8 */
 
@@ -52,7 +52,7 @@ void viterbi_init() {
 
 int viterbi_consume(int final);
 
-void viterbi(int hasx, uint8_t x, uint8_t y) {
+__attribute__((always_inline)) void viterbi(int hasx, uint8_t x, uint8_t y) {
 	for (int i = 0; i < VITERBI_STATES; i++) {
 		stbuf[sttail][i].pm = 0xFFFFFFFF;
 	}
@@ -60,7 +60,6 @@ void viterbi(int hasx, uint8_t x, uint8_t y) {
 	struct viterbi_st *prev = &stbuf[(sttail + VITERBI_BUFSZ - 1) % VITERBI_BUFSZ][0];
 	struct viterbi_st *cur  = &stbuf[sttail][0];
 	
-	int mlpm = 0xFFFFFFFF;
 	for (int i = 0; i < VITERBI_STATES; i++) {
 		for (int inp = 0; inp < 2; inp++) {
 			uint32_t pm = prev[i].pm;
@@ -73,8 +72,6 @@ void viterbi(int hasx, uint8_t x, uint8_t y) {
 				cur[next].pred_st = i;
 				cur[next].pred_trn = inp;
 			}
-			if (pm < mlpm)
-				mlpm = pm;
 		}
 	}
 	
